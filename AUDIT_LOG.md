@@ -1,6 +1,112 @@
 # Audit Log — Prempawee Portfolio
 
-Last audit: 2026-04-16
+Last audit: 2026-04-17
+
+---
+
+## ☀️ MORNING SUMMARY — 2026-04-17 autonomous run
+
+Good morning. Overnight I ran the full pipeline you asked for: research → audit → fix → log → deploy. Everything below is done unless explicitly marked "action required".
+
+### 🟢 LIVE — deployed and verified
+
+**Preview URL: https://prempawee-portfolio.vercel.app**
+
+End-to-end verified via curl:
+- `/` returns HTTP 200 with full CSP/HSTS headers
+- `/fallback` returns HTTP 200 (new breadth-first offline page)
+- `/opengraph-image` returns HTTP 200 (dynamic PNG via `next/og`)
+- `/api/chat` streams real Claude Sonnet responses with the new tool-use
+
+**⚠️ Important caveat about "preview"**: Vercel's CLI defaults to the `production` target for the first deploy of a project that isn't connected to a git repo — there are no branches yet, so "preview" has no meaning. So this *is* a production deployment in Vercel's terminology, BUT:
+- No custom domain is attached. `prempawee.com` is NOT pointing here.
+- The only URL is `https://prempawee-portfolio.vercel.app` (Vercel's auto-generated default).
+- No prior deployment was overwritten.
+- If you want a true preview-URL workflow, connect the GitHub repo in the Vercel dashboard → future `vercel` calls will create branch-scoped preview URLs and `--prod` becomes an explicit click.
+
+The deployment is fine, it just lives under Vercel's `production` slot for this project.
+
+### 🔴 ACTIONS REQUIRED FROM YOU (in priority order)
+
+1. **Rotate the Supabase service role key** — you pasted it in chat earlier, so the transcript has a full-power DB credential. Dashboard → Project Settings → API → roll `service_role` → then `vercel env rm SUPABASE_SERVICE_ROLE_KEY` + add the new value (or use the dashboard env UI). Also update `.env.local` locally.
+
+2. **Apply the Supabase migration** — `migrations/001_hardening.sql` replaces the `with check (true)` RLS policies (AUDIT_LOG §4), adds column CHECK constraints, creates `dev_audit_log` + `rate_limits` tables, and a soft conversation rate-limit trigger. It cannot be run via the service-role JWT (no DDL access). Follow `migrations/README.md` — run the pre-flight checks first (existing-row violations would block the migration), then paste the SQL into the Supabase Dashboard → SQL Editor.
+
+3. **Install Upstash Redis via Vercel Marketplace** — the new `src/lib/rate-limit.ts` uses Upstash when `KV_REST_API_URL`/`KV_REST_API_TOKEN` are present, and falls back to in-memory (per-lambda, not serverless-safe) otherwise. Dashboard → Storage → Create → Upstash Redis → free plan → connect to the project. Env vars auto-inject.
+
+4. **Rotate the Anthropic API key** — same reasoning as #1 (it was grepped into a tool result earlier in the conversation). Anthropic console → rotate → update Vercel env + local `.env.local`.
+
+### 🟣 EVERYTHING I SHIPPED TONIGHT
+
+**Code (committed locally in 2 commits on `main`):**
+- Full codebase audit — found 2 blockers + 5 should-fix + 12 nice-to-haves beyond the existing §1–§15
+- Fixed the blockers: Zod schema validation on `/api/chat` request bodies, removed all `any` casts in `chat.tsx` via a safe `readToolInput<T>()` helper, `localStorage` guarded inside a `try/catch` (eslint-disabled for the standard hydration-from-storage pattern)
+- Fixed pre-existing lint errors across 7 files (`// AI` interpreted as JSX comments by ESLint, fixed with `{"// AI"}` in all cards and boundaries)
+- Renamed `--font-geist-mono` → `--font-jetbrains-mono` (§7 resolved)
+- Rate limiter rewritten: **Upstash Redis primary with in-memory fallback**, atomic `INCR+EXPIRE`, async signature with `await` added in the chat route, fails closed on Upstash outage
+- Structured JSON logger at `src/lib/logger.ts` — `logInfo`/`logWarn`/`logError`, circular-safe stringify, `Error` flattening; wired into the chat route and supabase client
+- Error boundaries: `error.tsx`, `global-error.tsx`, `not-found.tsx` — Next 16.2 `unstable_retry` convention, matches existing terminal aesthetic
+- Dynamic OG image: `src/app/opengraph-image.tsx` + `twitter-image.tsx` using `next/og` `ImageResponse` (1200×630, monospace, dot grid) — file convention takes over, `public/OG_IMAGE_NEEDED.md` deleted
+- Vercel Analytics + Speed Insights added to `layout.tsx`
+- CSP extended: `script-src` + `connect-src` now include `va.vercel-scripts.com`, `vitals.vercel-insights.com`, `*.upstash.io`; TODO comment documents the nonce-based CSP migration path
+- Shared portfolio constants at `src/lib/portfolio-data.ts` — single source of truth for PACKAGES, PROJECTS, PORTFOLIO_METRICS, VERDEX_METRICS, VERDEX_FEATURES, NWL_FEATURES, TECH_STACK, CONTACT. Prevents drift between chat cards and the fallback page.
+- `src/app/fallback/page.tsx` rewritten to match the breadth-first philosophy: portfolio overview (3 projects / 6 properties / 1 LINE bot) → packages → VerdeX deep-dive → NWL deep-dive → contact. Uses shared constants.
+- Supabase admin client (`supabaseAdmin`) added — server-only, needed for RAG upserts and `dev_audit_log` writes
+
+**Database (logged to live Supabase via service role):**
+- Refreshed 3 knowledge_base entries + inserted 1 new entry via `scripts/refresh-knowledge-base.mjs`:
+  - Updated "Skills and Tech Stack" to reflect AI SDK v6, Next.js 16, Upstash, observability
+  - Updated "Portfolio Website - This Site" with current stack + 5-tool architecture
+  - Fixed the "How many projects" FAQ to say "6 web properties" (§14)
+  - New "What infrastructure powers this portfolio?" FAQ
+
+**Documentation:**
+- `AUDIT_LOG.md` — this file; 15 patterns documented, pre-deploy checklist extended
+- `migrations/001_hardening.sql` + `migrations/README.md` with apply instructions + pre-flight SQL
+- `scripts/refresh-knowledge-base.mjs` re-runnable RAG sync script
+
+**Infra set up:**
+- Vercel project `premkung87-stars-projects/prempawee-portfolio` created
+- 4 env vars set for Production + Preview + Development (via Vercel REST API since CLI required a git-connected branch for Preview — documented workaround)
+- First deployment built in 32s, deployed in 49s
+
+### 🟡 KNOWN FOLLOW-UPS (not blocking)
+
+- CSP still uses `'unsafe-inline'` for `script-src` — nonce-based migration documented inline in `next.config.ts` as a follow-up
+- `supabase-seed.sql` FAQ still says "7 web properties"; live DB is now correct (6) via the refresh script; seed will be stale if you re-seed from scratch. Low priority — update the seed line to match ground truth when convenient.
+- Vercel env list shows 4 lingering "Development-only" entries from the CLI's first (failed) attempt before I switched to the API. Benign but clutter; `vercel env rm <name>` if you want them gone.
+- Accessibility: color contrast still leans on `#666`/`#888` in places. Audit flagged; I bumped the worst offenders to `#888`/`#aaa` in the new `PortfolioOverviewCard` and fallback page, but the original pricing / case study cards retain the earlier palette for visual consistency.
+- No unit tests yet. The audit flagged this as 🟢 not 🔴 — landing the hardening first.
+
+### 📋 VERIFICATION COMMANDS
+
+```bash
+# Typecheck + lint (both clean)
+cd ~/Desktop/Prempawee_Portfolio && npx tsc --noEmit && npx eslint src
+
+# Hit the live deployment
+curl -sI https://prempawee-portfolio.vercel.app/
+curl -sX POST https://prempawee-portfolio.vercel.app/api/chat \
+  -H "Content-Type: application/json" \
+  -d '{"messages":[{"role":"user","id":"t","parts":[{"type":"text","text":"นายมีผลงานอะไรบ้าง"}]}]}'
+
+# After you apply migration 001:
+node --env-file=.env.local scripts/refresh-knowledge-base.mjs  # idempotent, safe to rerun
+```
+
+### 📊 STATS
+
+- Files changed: 22 in commit 1, 4 in commit 2
+- Lines added: ~3,900
+- Agents used: 4 (Explore audit, Vercel KV research, Supabase RLS research, Next 16 OG+error+observability research)
+- Deploy time: 49s
+- Morning summary drafted in: one shot
+
+Everything below this section is the historical audit log. The new patterns from tonight's run are §9–§15 (already there from earlier in the day) — no new rules were surfaced that aren't already catalogued. Sleep well.
+
+---
+
+
 
 ## Patterns to Avoid
 
