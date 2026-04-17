@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import {
   PACKAGES,
   PROJECTS,
@@ -354,11 +357,93 @@ export function LeadCaptureCard({
   );
 }
 
-export function ContactCard() {
+const CONTACT_COPY = {
+  en: {
+    header: "Get In Touch",
+    formLabel: "Or have Prempawee reach out",
+    emailPlaceholder: "your@email.com",
+    messageLabel: "Anything specific? (optional)",
+    messagePlaceholder: "Tell me about your business...",
+    submit: "Send",
+    submitting: "Sending...",
+    success: "Thanks! Prempawee will reply within 2-4 hours.",
+    errorGeneric: "Couldn't save — please use LINE or email above.",
+    errorRateLimit: "Too many submissions. Try LINE or email above.",
+    errorValidation: "Please enter a valid email.",
+    consultation:
+      "Free consultation — tell me about your business and I will recommend the right package. Reply within 2-4 hours.",
+  },
+  th: {
+    header: "ติดต่อ",
+    formLabel: "หรือให้ Prempawee ติดต่อกลับ",
+    emailPlaceholder: "อีเมลของคุณ",
+    messageLabel: "อยากบอกอะไรเพิ่มเติมมั้ย? (ไม่บังคับ)",
+    messagePlaceholder: "เล่าเรื่องธุรกิจของคุณ...",
+    submit: "ส่ง",
+    submitting: "กำลังส่ง...",
+    success: "ขอบคุณครับ Prempawee จะตอบกลับใน 2-4 ชม.",
+    errorGeneric: "ส่งไม่สำเร็จ — กรุณาติดต่อทาง LINE หรืออีเมลด้านบน",
+    errorRateLimit: "ส่งบ่อยเกินไป กรุณาติดต่อทาง LINE หรืออีเมลด้านบน",
+    errorValidation: "กรุณาใส่อีเมลให้ถูกต้อง",
+    consultation:
+      "ปรึกษาฟรี — เล่าเรื่องธุรกิจมา ผมจะแนะนำแพ็คเกจที่เหมาะ ตอบกลับภายใน 2-4 ชม.",
+  },
+} as const;
+
+type ContactFormStatus = "idle" | "submitting" | "success" | "error";
+
+export function ContactCard({ lang = "en" }: { lang?: "en" | "th" }) {
+  const copy = CONTACT_COPY[lang];
+  const [email, setEmail] = useState("");
+  const [message, setMessage] = useState("");
+  const [status, setStatus] = useState<ContactFormStatus>("idle");
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const busy = status === "submitting";
+
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (busy) return;
+    const trimmed = email.trim();
+    // Minimal client-side validation — server re-validates with zod.
+    if (!trimmed || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+      setStatus("error");
+      setErrorMsg(copy.errorValidation);
+      return;
+    }
+    setStatus("submitting");
+    setErrorMsg(null);
+    try {
+      const res = await fetch("/api/leads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: trimmed,
+          message: message.trim().slice(0, 2000) || undefined,
+          source: "contact_card_inline",
+        }),
+      });
+      if (res.ok) {
+        setStatus("success");
+        return;
+      }
+      if (res.status === 429) {
+        setStatus("error");
+        setErrorMsg(copy.errorRateLimit);
+        return;
+      }
+      setStatus("error");
+      setErrorMsg(copy.errorGeneric);
+    } catch {
+      setStatus("error");
+      setErrorMsg(copy.errorGeneric);
+    }
+  }
+
   return (
     <div className="my-3 border border-white/10 rounded p-4 bg-white/[0.02]">
       <span className="text-[10px] uppercase tracking-[2px] text-[#888] block mb-3">
-        Get In Touch
+        {copy.header}
       </span>
       <div className="space-y-3">
         <div>
@@ -396,10 +481,64 @@ export function ContactCard() {
             View packages on Fastwork
           </a>
         </div>
-        <p className="text-[#888] text-xs mt-2">
-          Free consultation — tell me about your business and I will recommend
-          the right package. Reply within {CONTACT.responseTime}.
-        </p>
+        <p className="text-[#888] text-xs mt-2">{copy.consultation}</p>
+      </div>
+
+      {/* Divider + inline one-field lead form. Skips when success state has
+          replaced it. */}
+      <div className="mt-4 pt-4 border-t border-white/10">
+        {status === "success" ? (
+          <p className="text-[#e0e0e0] text-sm text-center py-2">
+            <span aria-hidden="true">✓ </span>
+            {copy.success}
+          </p>
+        ) : (
+          <form onSubmit={onSubmit} className="space-y-2" noValidate>
+            <label className="text-[#888] text-[11px] block">
+              {copy.formLabel}
+            </label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder={copy.emailPlaceholder}
+              required
+              maxLength={320}
+              disabled={busy}
+              aria-label={copy.emailPlaceholder}
+              className="w-full bg-white/[0.03] border border-white/10 rounded px-3 py-2 text-white text-sm placeholder:text-[#666] outline-none focus:border-white/30 disabled:opacity-50"
+            />
+            <textarea
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              placeholder={copy.messagePlaceholder}
+              maxLength={2000}
+              rows={2}
+              disabled={busy}
+              aria-label={copy.messageLabel}
+              className="w-full bg-white/[0.03] border border-white/10 rounded px-3 py-2 text-white text-sm placeholder:text-[#666] outline-none focus:border-white/30 disabled:opacity-50 resize-none"
+            />
+            <div className="flex items-center justify-between gap-3">
+              {status === "error" && errorMsg ? (
+                <span
+                  role="alert"
+                  className="text-red-400 text-[11px] leading-tight"
+                >
+                  {errorMsg}
+                </span>
+              ) : (
+                <span />
+              )}
+              <button
+                type="submit"
+                disabled={busy}
+                className="shrink-0 px-4 py-1.5 text-sm text-white bg-white/10 hover:bg-white/20 border border-white/10 rounded transition-colors disabled:opacity-50 disabled:cursor-wait"
+              >
+                {busy ? copy.submitting : copy.submit}
+              </button>
+            </div>
+          </form>
+        )}
       </div>
     </div>
   );
