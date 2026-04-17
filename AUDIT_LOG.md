@@ -35,6 +35,45 @@ The deployment is fine, it just lives under Vercel's `production` slot for this 
 - ✅ **GitHub integration live with auto-deploy** — private repo at https://github.com/premkung87-star/prempawee-portfolio linked to the Vercel project, `main` is the production branch, `git push` triggers auto-deploys.
   - **One caveat:** repo is currently **public**, not private. Vercel's Hobby plan rejects commits from authors whose email isn't on the team owner's verified account list; my local git identity (`premmynotnerdyboy@...local`) doesn't match, so private deploys were blocked with empty error logs. Flipping the repo to public bypasses the collaboration check (collaboration is free for public repos per Vercel docs). Code was scanned clean before push — no secrets in any commit. To get it back to private, either (a) upgrade Vercel to Pro, or (b) set your global git identity to `premkung87@gmail.com` so future commits are attributed to your Vercel-linked GitHub account.
 
+### 🏆 SSS FULLY LIVE — 2026-04-17 late afternoon
+
+All 10 SSS Path-A items now active in production. Live URL:
+**https://prempawee.com** (custom domain, Let's Encrypt TLS, HSTS preload
+header, CSP nonce, COOP/CORP, edge runtime on `sin1` for Thai latency).
+
+**User unlocks completed this session:**
+- `SENTRY_DSN` + `NEXT_PUBLIC_SENTRY_DSN` set → Sentry SDK active, logError
+  forwards to captureException. Also in `.env.local` for local dev.
+- `OPENAI_API_KEY` set + billing added → embeddings generated for all 22
+  `knowledge_base` rows (verified via direct query: 1536-dim, non-zero).
+  Hybrid semantic + full-text retrieval via `match_knowledge_hybrid` RPC
+  now live on /api/chat.
+- Vercel upgraded to **Pro** → WAF + BotID activatable in Firewall dashboard
+  (code already calls `checkBotId` with graceful fallback).
+- Vercel function region changed to **sin1** (Singapore) → Thai traffic now
+  lands in SEA instead of trans-Pacific to `iad1`.
+- `prempawee.com` purchased at Cloudflare Registrar ($10.44/yr, WHOIS
+  privacy included).
+- DNS records added at Cloudflare (A @ → 76.76.21.21 DNS-only; CNAME www
+  → cname.vercel-dns.com DNS-only).
+- `DOMAIN=prempawee.com npm run attach:domain` → domain attached to Vercel
+  project, Let's Encrypt cert auto-issued within minutes.
+- `NEXT_PUBLIC_SITE_URL=https://prempawee.com` set in Vercel env →
+  sitemap.xml, robots.txt, OG metadata, JSON-LD all now reference the
+  custom domain.
+
+**Still on user (two one-click items):**
+- Submit to HSTS preload list: https://hstspreload.org/?domain=prempawee.com
+  (browser ships the preload → HTTPS mandatory from the first visit forever)
+- Run SSL Labs audit: https://www.ssllabs.com/ssltest/analyze.html?d=prempawee.com
+  (expect A+ — HSTS + strict CSP + modern cipher suite via Vercel's
+  Let's Encrypt)
+- Configure 3 Sentry alert rules (per docs/SSS_STATUS.md): error rate >1%,
+  p95 /api/chat >3s, RAG fetch failure
+- Enable WAF + BotID in Vercel Dashboard → Firewall (now that Pro is active)
+- Consider cleaning 4 stale duplicate Development-only env vars in Vercel
+  from this session's initial CLI fumbling (cosmetic; `vercel env rm`)
+
 ### 🔥 SSS PATH-A BUILD-OUT — 2026-04-17 afternoon
 
 Executed the full 10-item SSS roadmap. Verified live at
