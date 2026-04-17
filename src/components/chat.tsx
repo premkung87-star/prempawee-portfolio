@@ -89,6 +89,14 @@ export function Chat() {
     return installSessionIdFetchOverride();
   }, []);
 
+  // TEMPORARY debug beacon — flags when Chat's useEffect actually runs on
+  // the client, proving React hydrated this component. The inline debug
+  // reporter in layout.tsx polls window.__CHAT_MOUNTED and reports the
+  // result. Remove when the hydration-bug diagnosis lands.
+  useEffect(() => {
+    (window as unknown as { __CHAT_MOUNTED?: boolean }).__CHAT_MOUNTED = true;
+  }, []);
+
   const [input, setInput] = useState("");
   const [consented, setConsented] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
