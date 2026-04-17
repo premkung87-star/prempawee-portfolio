@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { NextRequest } from "next/server";
 
-describe("middleware — CSRF origin check", () => {
+describe("proxy — CSRF origin check", () => {
   beforeEach(() => {
     vi.resetModules();
     vi.stubEnv("NODE_ENV", "production");
@@ -10,12 +10,12 @@ describe("middleware — CSRF origin check", () => {
     vi.unstubAllEnvs();
   });
 
-  async function runMiddleware(init: {
+  async function runProxy(init: {
     path: string;
     method: string;
     origin?: string;
   }): Promise<Response> {
-    const { middleware } = await import("./middleware");
+    const { proxy } = await import("./proxy");
     const url = new URL(init.path, "https://prempawee.com");
     const headers = new Headers();
     if (init.origin !== undefined) headers.set("origin", init.origin);
@@ -23,11 +23,11 @@ describe("middleware — CSRF origin check", () => {
       method: init.method,
       headers,
     });
-    return middleware(req);
+    return proxy(req);
   }
 
   it("allows POST /api/leads from prempawee.com origin", async () => {
-    const res = await runMiddleware({
+    const res = await runProxy({
       path: "/api/leads",
       method: "POST",
       origin: "https://prempawee.com",
@@ -37,7 +37,7 @@ describe("middleware — CSRF origin check", () => {
   });
 
   it("allows POST /api/leads from auto-generated Vercel preview origin", async () => {
-    const res = await runMiddleware({
+    const res = await runProxy({
       path: "/api/leads",
       method: "POST",
       origin: "https://prempawee-portfolio-abc123-premkung87-stars-projects.vercel.app",
@@ -46,7 +46,7 @@ describe("middleware — CSRF origin check", () => {
   });
 
   it("rejects POST /api/leads from disallowed origin", async () => {
-    const res = await runMiddleware({
+    const res = await runProxy({
       path: "/api/leads",
       method: "POST",
       origin: "https://malicious.example.com",
@@ -57,7 +57,7 @@ describe("middleware — CSRF origin check", () => {
   });
 
   it("allows GET requests regardless of origin", async () => {
-    const res = await runMiddleware({
+    const res = await runProxy({
       path: "/api/chat",
       method: "GET",
       origin: "https://anywhere.com",
@@ -66,7 +66,7 @@ describe("middleware — CSRF origin check", () => {
   });
 
   it("allows POST to non-/api/ paths (admin login, etc.) without origin check", async () => {
-    const res = await runMiddleware({
+    const res = await runProxy({
       path: "/admin/login",
       method: "POST",
       origin: "https://anywhere.com",
@@ -76,7 +76,7 @@ describe("middleware — CSRF origin check", () => {
 
   it("in dev mode, bypasses origin check entirely", async () => {
     vi.stubEnv("NODE_ENV", "development");
-    const res = await runMiddleware({
+    const res = await runProxy({
       path: "/api/leads",
       method: "POST",
       origin: "https://any.example.com",
