@@ -4,6 +4,42 @@ Last audit: 2026-04-17
 
 ---
 
+## 🔙 A+ CSP ROLLED BACK — hydration regression — 2026-04-17 evening
+
+Silent React 19 hydration failure on Next.js 16 traced to commit `899ae89`
+(the CSP-A+ hardening bundle). Chat client component's server HTML rendered
+fine, but NO `useEffect` ever fired on the client — meaning no onClick handlers
+attached. The "I understand" consent button received clicks at the DOM level
+but `onConsent` never ran → banner stuck forever → site non-interactive.
+
+**No visible signals**: no JavaScript error, no unhandled rejection, no
+`console.error`/`console.warn` output. Debug reporter that monkey-patched
+console + listened for `error` events caught nothing. React just silently
+gave up hydrating and left SSR HTML in place.
+
+**The combination that broke it** (at least one of these — reverting them
+all together was the only thing that restored hydration; isolating which
+specific piece is on the follow-up list):
+
+1. `middleware.ts` → `proxy.ts` rename (proxy runs Node.js runtime, not edge)
+2. `experimental.sri: { algorithm: "sha256" }` in `next.config.ts`
+3. `await connection()` in `src/app/page.tsx` forcing dynamic render
+4. Async `RootLayout` with `await headers()` reading the `x-nonce` header
+5. CSP `script-src 'self' 'nonce-XXX' 'strict-dynamic' ...`
+
+**Rolled back** in commit `164ef58` — nuclear revert of all five to their
+pre-`899ae89` state. Site back to A-grade (not A+) security posture that 150+
+prior sessions worked on.
+
+**False positive that hid the bug for hours**: 148 conversation rows were
+logged in Supabase after `899ae89` deployed, and I read that as proof the
+site was working. It wasn't. Those 148 were bot probes hitting `/api/chat`
+DIRECTLY (5 unique "srv-" sessions in 35 seconds, classic intro questions —
+"Who are you?", "How do I get in touch?", etc.). No real human ever
+successfully hydrated the Chat UI between `899ae89` and `164ef58`.
+
+**New rule** logged as §20 below.
+
 ## 🔧 FUNNEL FIXED — 2026-04-17 late afternoon
 
 First real data-pull post-launch revealed 3 silent funnel bugs already costing leads. All fixed in one session.
@@ -390,6 +426,11 @@ Everything below this section is the historical audit log. The new patterns from
 **What happened:** The Supabase seed FAQ and the system prompt both asserted "7 web properties + 1 LINE bot", but the PROJECTS array in `tool-results.tsx` only itemizes 6 web properties. Headline metrics were hardcoded in two places and drifted apart.
 **Fix applied:** Updated the PORTFOLIO_METRICS card to show 6, and flagged the seed/system-prompt claim to the user for verification against ground truth.
 **Rule:** If a headline number appears in more than one place (seed data, system prompt, UI card), either (a) derive it from a single source at build/runtime, or (b) leave a comment in every location pointing at the authoritative source. When numbers disagree, the UI has to be self-consistent with what it renders — never quote a count you cannot back up from the same page.
+
+### 20. A 5-change CSP-A+ hardening bundle silently broke React 19 hydration on Next.js 16 — and bot probes hid the breakage
+**What happened:** Commit `899ae89` bundled five changes to unlock A+ on Mozilla Observatory + securityheaders.com: (1) `middleware.ts` → `proxy.ts` rename (Node.js runtime), (2) `experimental.sri` integrity hashes on build chunks, (3) `await connection()` to force dynamic render, (4) async `RootLayout` reading `x-nonce` via `await headers()`, (5) CSP `script-src 'self' 'nonce-XXX' 'strict-dynamic'`. Curl-based verification showed every prod `<script>` tag getting both `nonce="..."` AND `integrity="sha256-..."`. The Observatory grade went from B+/80 → A+/125. Everything *looked* correct. But in a real browser, React 19 silently failed to hydrate the Chat client component — **no `useEffect` ever fired**, no console.error, no warning, no throw. Server HTML rendered fine (clicks registered at the DOM level), but every onClick handler in Chat was ghost HTML. Site looked alive, was actually dead. We read 148 Supabase `conversations` rows as proof the fix worked — those were bot probes hitting `/api/chat` directly, bypassing the broken UI entirely (5 `srv-*` sessions in a 35-second cluster, classic scraper intro questions). No real user hydrated the UI for ~4 hours. Only direct human testing of "click the consent button, does the banner disappear" caught it. Diagnostic took 6 iterations of partial reverts + an on-screen debug reporter before a nuclear rollback of all five changes at once finally restored hydration.
+**Fix applied:** Commit `164ef58` — reverted ALL of next.config.ts, src/app/layout.tsx, src/app/page.tsx, and renamed proxy.ts back to middleware.ts, to their pre-`899ae89` state. Lost the A+ grade (back to A with `'unsafe-inline'` in script-src). Isolating which of the five specific pieces was the hydration killer is on the follow-up list — the combination is what matters right now: it's poison. Chat.tsx and tool-results.tsx were also reverted to their pre-funnel-fix state since we couldn't rule out their contribution; the onFinish async fix in /api/chat/route.ts (§19) and the system-prompt lead-capture nudge survived because they're server-only.
+**Rule:** Never ship a multi-change security hardening bundle without *direct human verification* that the interactive UI still works. Curl proves the response bytes are right; it does NOT prove React hydrated. Before marking a security upgrade "done," open the production URL in a real browser and (a) click a button whose onClick changes visible state, (b) submit a form, (c) watch chat stream. Supabase `conversations` row counts and response headers are NOT sufficient validation — bot probes and edge runtime health checks produce both without any real UI life. When hydration fails silently (no console output), make ONE change at a time and re-test in a browser between each. The biggest failure mode here was confidence-from-indirect-signals: we had A+ grades, 148 logged messages, and HTTP 200s, and the site was still completely non-functional for humans.
 
 ### 19. Fire-and-forget promises inside `streamText.onFinish` silently drop on Vercel edge runtime
 **What happened:** First data-pull after launch: 148 user messages logged, **0 assistant messages**; 148 `chat_message` analytics events, **only 1 `token_usage` event** (ratio 148:1). The user-side `logConversation` call that runs synchronously in the POST handler was landing 100% — but both the assistant-side `logConversation` AND the `logAnalytics("token_usage", ...)` call lived inside `streamText`'s `onFinish` callback as fire-and-forget promises (`.catch(err => logWarn(...))`, no await). On Vercel's edge runtime the worker is torn down the moment the UI-message stream closes; any in-flight microtasks tied to that worker get cancelled. So the `onFinish` body ran, Supabase insert was *scheduled*, then the worker died before the HTTP request to Supabase actually completed. Result: silent 99% data loss on everything-after-stream-close.
