@@ -4,6 +4,25 @@ Last audit: 2026-04-17
 
 ---
 
+## 🔧 FUNNEL FIXED — 2026-04-17 late afternoon
+
+First real data-pull post-launch revealed 3 silent funnel bugs already costing leads. All fixed in one session.
+
+**Pre-fix state (24h of production traffic):**
+- 148 real user questions ("How do I get in touch?", "Do your bots use Claude?", "คุณอยู่ที่ไหน")
+- 0 assistant responses logged
+- 148 unique sessions (every turn forked to a fresh `srv-*` ID — client wasn't sending session back)
+- 1 of 148 token_usage events landed (fire-and-forget promises dying on edge worker teardown)
+- 0 leads captured
+
+**Post-fix (verified on prod):**
+- Assistant `text` logged via awaited `logConversation` in `onFinish` — 2 rows per turn now, both roles
+- Stable client-side UUID session ID in localStorage + `DefaultChatTransport({ headers: { "x-session-id": sid } })` → one browser = one thread
+- `onFinish` is now async and `await`s all DB writes in parallel via `Promise.all` (guards against worker teardown)
+- System prompt now nudges once after `show_contact` ("If you'd like, I can note your email or LINE ID so Prempawee can follow up") — bilingual, non-pushy, respects 90/10
+
+Logged as §19 below. Key rule: on edge runtime, fire-and-forget = data loss.
+
 ## 💎 CSP A+ UNLOCKED — 2026-04-17 afternoon
 
 **Mozilla Observatory: B+ / 80 → A+ / 125 · 10 / 10 tests passing · 0 failing.**
@@ -371,6 +390,11 @@ Everything below this section is the historical audit log. The new patterns from
 **What happened:** The Supabase seed FAQ and the system prompt both asserted "7 web properties + 1 LINE bot", but the PROJECTS array in `tool-results.tsx` only itemizes 6 web properties. Headline metrics were hardcoded in two places and drifted apart.
 **Fix applied:** Updated the PORTFOLIO_METRICS card to show 6, and flagged the seed/system-prompt claim to the user for verification against ground truth.
 **Rule:** If a headline number appears in more than one place (seed data, system prompt, UI card), either (a) derive it from a single source at build/runtime, or (b) leave a comment in every location pointing at the authoritative source. When numbers disagree, the UI has to be self-consistent with what it renders — never quote a count you cannot back up from the same page.
+
+### 19. Fire-and-forget promises inside `streamText.onFinish` silently drop on Vercel edge runtime
+**What happened:** First data-pull after launch: 148 user messages logged, **0 assistant messages**; 148 `chat_message` analytics events, **only 1 `token_usage` event** (ratio 148:1). The user-side `logConversation` call that runs synchronously in the POST handler was landing 100% — but both the assistant-side `logConversation` AND the `logAnalytics("token_usage", ...)` call lived inside `streamText`'s `onFinish` callback as fire-and-forget promises (`.catch(err => logWarn(...))`, no await). On Vercel's edge runtime the worker is torn down the moment the UI-message stream closes; any in-flight microtasks tied to that worker get cancelled. So the `onFinish` body ran, Supabase insert was *scheduled*, then the worker died before the HTTP request to Supabase actually completed. Result: silent 99% data loss on everything-after-stream-close.
+**Fix applied:** Made `onFinish` async and `await`ed the DB writes in parallel via `Promise.all([logConversation(...), logAnalytics(...)])`, with per-write `try/catch` so one transient Supabase 5xx doesn't block the other. `streamText` already awaits the `onFinish` promise internally before finalizing the stream, so this extends the worker's lifetime by ~50-150ms (one Supabase round-trip) — imperceptible to the user but guarantees both rows land. Also fixed session-ID persistence while in there: client now generates a UUID on mount, stores in `localStorage`, and passes it via `DefaultChatTransport({ headers: { "x-session-id": sid } })` so one browser = one conversation thread server-side.
+**Rule:** On any serverless/edge runtime, NEVER fire-and-forget a promise inside a streaming callback (`onFinish`, `onAbort`, `onStepFinish`, etc.). The stream closing is the signal the worker can terminate, and cancelled microtasks do not write to your database. Make the callback `async` and `await` anything whose side-effect must persist — observability, billing, conversation history, audit logs. Counter-examples that seem-to-work are lucky timing, not correctness: the user-side `logConversation` in `POST /api/chat` works because it runs SYNCHRONOUSLY before `streamText` is even called, not because fire-and-forget is generally safe. If something MUST be async-after-response and you cannot block the response close, use Next.js `after()` from `next/server` or Vercel's `ctx.waitUntil()` — both are designed to keep the worker alive past response.
 
 ### 18. Next.js 16 deprecated `middleware.ts` → `proxy.ts` — this was the real root cause of §17, not Turbopack
 **What happened:** In §17 we concluded "Turbopack doesn't auto-inject nonces into framework scripts" and shipped `'unsafe-inline'` as a workaround to unfreeze the site. That diagnosis was half right: Turbopack was involved, but the deeper issue was that the **`middleware.ts` file convention is deprecated in Next.js 16** — renamed to `proxy.ts`. The Next.js 16 docs at `node_modules/next/dist/docs/01-app/02-guides/upgrading/version-16.md` spell this out: middleware runs on the edge runtime, proxy runs on Node.js, and the nonce auto-injection pipeline documented in the CSP guide only runs correctly inside proxy's Node.js server renderer. Under the old middleware convention (even when it still "worked"), the nonce values were set on the request header but never applied to the SSR output — so every `<script>` tag shipped naked and CSP `strict-dynamic` blocked them all. Renaming to `proxy.ts` gave us instant nonce propagation (verified empirically: every script now has `nonce="..."`), which immediately unlocked A+ on Mozilla Observatory + securityheaders.com.
