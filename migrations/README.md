@@ -88,3 +88,17 @@ Once the migration is in, you can use it to:
   Supabase fallback branch).
 - Upsert new `knowledge_base` entries from scripts
   (see `scripts/refresh-knowledge-base.mjs`).
+
+## Backups
+
+Supabase Pro includes **automatic daily backups** (7-day retention). No action
+required to enable. To verify restore-path health once a quarter:
+
+1. Dashboard → Database → Backups → pick a recent backup → "Restore to new project"
+2. Target a throwaway Supabase project (free tier is fine)
+3. Verify `select count(*) from knowledge_base` matches production
+4. Tear down the test project
+
+For on-demand backups: Dashboard → Database → Backups → "Create a backup".
+
+See `docs/OPERATIONS.md` for the full runbook.
