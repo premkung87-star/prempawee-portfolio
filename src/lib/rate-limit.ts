@@ -15,7 +15,12 @@ import { Redis } from "@upstash/redis";
 import { logError, logWarn } from "./logger";
 
 const WINDOW_MS = 60 * 60 * 1000; // 1 hour
-const MAX_REQUESTS = 3;
+// 10/hr per IP. Higher than the original 3/hr because Thai mobile ISPs
+// (and any office NAT) collapse many users into a single egress IP —
+// 3/hr locked out entire networks. With the client-side 20-messages-per-
+// session cap still enforced, 10 sessions × 20 msgs = 200 Claude calls/hr
+// per egress IP maximum, which is still a sane abuse ceiling.
+const MAX_REQUESTS = 10;
 
 // --- Upstash client (module-scoped so Fluid Compute reuses across invocations)
 const hasUpstash = Boolean(

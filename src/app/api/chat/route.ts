@@ -93,7 +93,7 @@ export async function POST(req: Request) {
     return new Response(
       JSON.stringify({
         error:
-          "Too many requests. You can start 3 chat sessions per hour. Please try again later.",
+          "Too many requests from your network. Please try again later, or reach out on LINE / email.",
         resetAt,
       }),
       {
