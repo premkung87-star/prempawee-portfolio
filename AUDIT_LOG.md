@@ -4,6 +4,49 @@ Last audit: 2026-04-17
 
 ---
 
+## 💎 A+ RESTORED PROPERLY — 2026-04-17 night · full 4-phase workflow complete
+
+Ran the user's requested Audit → Fix → Reinforce → Upgrade workflow end-to-end with three parallel subagents (code-reviewer, external-research, vercel-deployment-expert) and landed a clean A+.
+
+**Phase 1 — Audit (3 parallel subagents, 10-minute window):**
+- **Subagent 1 (code-reviewer)** bisected the 5 changes in commit 899ae89 and pinned `experimental.sri` as the hydration killer with 9/10 confidence, citing the split webpack + Turbopack SRI implementation paths at `node_modules/next/dist/build/webpack/plugins/subresource-integrity-plugin.js:20-58` (webpack-only) vs `node_modules/next/dist/shared/lib/turbopack/manifest-loader.js:182-202` (Turbopack-only), and `node_modules/next/dist/server/app-render/required-scripts.js:34-52` where `ReactDOM.preinit()` hands each chunk the integrity hash that Chrome then silently blocks on mismatch.
+- **Subagent 2 (general-purpose)** found the matching upstream issue — [vercel/next.js#91633](https://github.com/vercel/next.js/issues/91633), open since 2026-03-19, filed by a styled-components maintainer with identical symptoms: Vercel's CDN re-encodes responses (Brotli/gzip) after build-time hashing so integrity attributes never match the bytes Chrome receives. No fix landed in 16.2.0-16.2.4. Workaround everyone converges on: disable experimental.sri.
+- **Subagent 3 (vercel-deployment-expert)** pulled Vercel runtime logs for all 10 deployments in the broken window — zero SSR errors, zero 5xxs, zero CSP reports (no reporter endpoint existed). Also flagged two observability gaps: `sentry.client.config.ts:39` was filtering `/Hydration failed/` in prod (masking the exact signal we needed), and no CSP `report-uri` meant browser-side blocks were invisible to us.
+
+**Phase 2 — Fix (commit `0c097bc`):**
+- Dropped ONLY `experimental.sri` from `next.config.ts` — kept `proxy.ts` rename, async `RootLayout` with `await headers()`, `await connection()`, CSP `'nonce-XXX' 'strict-dynamic'`. All the "scary" changes in 899ae89 were innocent.
+- Added CSP `report-uri /api/csp-report` + new edge route that logs every browser-side violation to structured logs.
+- Removed `/Hydration failed/` from Sentry `ignoreErrors`. Future hydration failures will surface in Sentry instead of being silently suppressed.
+
+**Phase 3 — Reinforce (commit `0c097bc`):**
+- Installed `@playwright/test` + chromium (92 MB one-time install).
+- Wrote `tests/e2e/smoke.spec.ts` with 6 regression-guarding tests: page load, consent button click (§17/§20 guard), language toggle, chat streaming, session-ID header injection, security headers.
+- New GitHub Actions `e2e` job runs on push-to-main, blocks merge on failure, uploads playwright-report artifacts on failure with 7-day retention.
+- Updated `AGENTS.md` with mandatory-browser-verification rule for any change to layout.tsx / page.tsx / proxy.ts / middleware.ts / chat.tsx / next.config.ts (experimental flags) / any CSP directive. "Never enable experimental.sri on this project" is codified there with a link to #91633.
+
+**Phase 4 — Upgrade (commits `677758b`, `997fd7c`):**
+- Re-added session-ID persistence via fetch-wrapper pattern (no useChat-option tinkering). Playwright test 5/5 of the new suite green. `srv-*` fallback is gone; one browser = one thread.
+- Re-added bilingual inline lead form on ContactCard. POST `/api/leads` verified end-to-end (201 + Supabase row).
+- Final Mozilla Observatory scan: **A+ / 120 / 10 of 10 passing**. Without SRI bonus the ceiling is 120 instead of 125 — still A+ in every practical sense.
+- §21 logged below.
+
+**Full commit trail this session:**
+- `164ef58` — nuclear rollback (restored hydration at A grade)
+- `0c097bc` — targeted fix + Playwright + CI gate + observability (A+ restored)
+- `677758b` — session-ID persistence (fetch-wrapper)
+- `997fd7c` — inline lead form on ContactCard
+
+**Security posture now live:**
+- Mozilla Observatory A+/120 (10/10 tests, 0 failures)
+- securityheaders.com A+ expected (unsafe-inline warning gone)
+- HSTS preload 2yr, COOP same-origin, CORP same-origin, X-Frame-Options DENY
+- CSP `default-src 'self'; script-src 'self' 'nonce-XXX' 'strict-dynamic' https://va.vercel-scripts.com; ...; report-uri /api/csp-report`
+
+**Observability now live:**
+- Sentry captures hydration errors again
+- /api/csp-report receives browser-side violations
+- Playwright blocks any future hydration regression from reaching prod unnoticed
+
 ## 🔙 A+ CSP ROLLED BACK — hydration regression — 2026-04-17 evening
 
 Silent React 19 hydration failure on Next.js 16 traced to commit `899ae89`
@@ -426,6 +469,11 @@ Everything below this section is the historical audit log. The new patterns from
 **What happened:** The Supabase seed FAQ and the system prompt both asserted "7 web properties + 1 LINE bot", but the PROJECTS array in `tool-results.tsx` only itemizes 6 web properties. Headline metrics were hardcoded in two places and drifted apart.
 **Fix applied:** Updated the PORTFOLIO_METRICS card to show 6, and flagged the seed/system-prompt claim to the user for verification against ground truth.
 **Rule:** If a headline number appears in more than one place (seed data, system prompt, UI card), either (a) derive it from a single source at build/runtime, or (b) leave a comment in every location pointing at the authoritative source. When numbers disagree, the UI has to be self-consistent with what it renders — never quote a count you cannot back up from the same page.
+
+### 21. The specific culprit in §20 was `experimental.sri` alone — CDN re-encoding invalidates the integrity hash before it reaches Chrome
+**What happened:** §20 rolled back all 5 changes in commit 899ae89 to unblock the site. That worked but left the root cause unknown. A follow-up audit with three parallel subagents pinpointed the real killer: `experimental.sri: { algorithm: "sha256" }` in `next.config.ts`. Mechanism: Next.js computes the SHA-256 integrity hash at build time over the exact bytes the webpack/Turbopack output emits. Next.js hands that hash to `ReactDOM.preinit(src, { integrity, ... })` in `node_modules/next/dist/server/app-render/required-scripts.js:34-52`, which renders it as an `integrity="sha256-..."` attribute on the `<script>` tag in the streaming HTML. But Vercel's CDN/edge re-encodes the response on the wire — Brotli or gzip, possibly with different compression levels than what was hashed — so the bytes Chrome receives do NOT match the hash. Chrome's SRI check fires at script-EXECUTION time (not fetch), silently refuses to run the chunk, and emits no CSP violation unless `require-sri-for` is set (it is not). The specific chunk that dies is the React 19 client runtime containing every client component's hydration code, so no `useEffect` ever fires, no onClick attaches, the site renders but is inert. Upstream issue: [vercel/next.js#91633](https://github.com/vercel/next.js/issues/91633) — open since 2026-03-19, reproduced by a styled-components maintainer with identical symptoms, no fix through 16.2.4. The other four changes in 899ae89 (proxy.ts rename, async RootLayout, `await connection()`, nonce + strict-dynamic CSP) were innocent — they ship cleanly now in commit `0c097bc`.
+**Fix applied:** Drop `experimental.sri` permanently on this project (codified in `AGENTS.md`). Restore everything else from 899ae89. Add CSP `report-uri /api/csp-report` + new edge handler so next browser-side CSP block surfaces in our logs instead of devtools consoles we can't see. Remove `/Hydration failed/` from `sentry.client.config.ts` `ignoreErrors` (it was filtering the exact signal that would have saved us 3 hours — §20's second observability failure). Install Playwright 1.59 + chromium + wire a 6-test regression suite + CI gate that blocks merge on failure. Mozilla Observatory went A+/80 → A+/120 (was A+/125 with SRI bonus, now A+/120 without; 10/10 tests passing either way).
+**Rule:** An `experimental.*` Next.js flag that passes a build + unit tests is NOT the same as "production-safe." Before enabling any experimental flag on this project: (1) search `github.com/vercel/next.js/issues` for `experimental.<flag>` and read every open issue from the last 6 months, (2) ship it on a canary/preview deploy FIRST, (3) run `npm run test:e2e` against the preview URL in a real browser before promoting. Especially for anything touching script loading (SRI, nonces, module preloading) on Vercel: the CDN is in the critical path and its byte-level transforms are not guaranteed to preserve hashes. Vercel documents gzip/Brotli application as an automatic edge optimization — this is fundamentally incompatible with build-time-hashed SRI for as long as the CDN transforms bytes after the build hash is computed. The `experimental` label exists for a reason; treat it as a warning, not a feature flag.
 
 ### 20. A 5-change CSP-A+ hardening bundle silently broke React 19 hydration on Next.js 16 — and bot probes hid the breakage
 **What happened:** Commit `899ae89` bundled five changes to unlock A+ on Mozilla Observatory + securityheaders.com: (1) `middleware.ts` → `proxy.ts` rename (Node.js runtime), (2) `experimental.sri` integrity hashes on build chunks, (3) `await connection()` to force dynamic render, (4) async `RootLayout` reading `x-nonce` via `await headers()`, (5) CSP `script-src 'self' 'nonce-XXX' 'strict-dynamic'`. Curl-based verification showed every prod `<script>` tag getting both `nonce="..."` AND `integrity="sha256-..."`. The Observatory grade went from B+/80 → A+/125. Everything *looked* correct. But in a real browser, React 19 silently failed to hydrate the Chat client component — **no `useEffect` ever fired**, no console.error, no warning, no throw. Server HTML rendered fine (clicks registered at the DOM level), but every onClick handler in Chat was ghost HTML. Site looked alive, was actually dead. We read 148 Supabase `conversations` rows as proof the fix worked — those were bot probes hitting `/api/chat` directly, bypassing the broken UI entirely (5 `srv-*` sessions in a 35-second cluster, classic scraper intro questions). No real user hydrated the UI for ~4 hours. Only direct human testing of "click the consent button, does the banner disappear" caught it. Diagnostic took 6 iterations of partial reverts + an on-screen debug reporter before a nuclear rollback of all five changes at once finally restored hydration.
