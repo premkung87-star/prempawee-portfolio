@@ -47,21 +47,30 @@ const CSRF_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 // Expensive endpoints that are worth spending a BotID check on
 const BOT_PROTECTED_PATHS = ["/api/chat", "/api/leads"];
 
-function buildCsp(nonce: string, isDev: boolean): string {
+function buildCsp(_nonce: string, isDev: boolean): string {
   if (isDev) {
     // CSP disabled in development (React needs eval for debugging)
     return "";
   }
+  // Using 'unsafe-inline' for script-src because Next.js 16 + Turbopack
+  // does not propagate middleware-set nonces to its auto-generated script
+  // chunks (verified empirically: every <script> tag in the SSR HTML ships
+  // without a nonce attribute, so 'strict-dynamic' with nonces blocks 100%
+  // of scripts and React never hydrates). This is the same posture most
+  // production Next.js apps ship with — strong on everything BUT inline-
+  // script risk. Revisit once Turbopack gets proper nonce auto-injection.
+  // See: https://nextjs.org/docs/app/guides/content-security-policy
   const directives = [
     `default-src 'self'`,
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' https://va.vercel-scripts.com`,
+    `script-src 'self' 'unsafe-inline' https://va.vercel-scripts.com`,
     `style-src 'self' 'unsafe-inline'`,
     `connect-src 'self' https://*.supabase.co https://api.anthropic.com https://*.upstash.io https://va.vercel-scripts.com https://vitals.vercel-insights.com`,
-    `img-src 'self' data: blob:`,
+    `img-src 'self' data: blob: https://*.sentry.io`,
     `font-src 'self' https://fonts.gstatic.com`,
     `frame-ancestors 'none'`,
     `base-uri 'self'`,
     `form-action 'self'`,
+    `worker-src 'self' blob:`,
   ];
   return directives.join("; ");
 }
