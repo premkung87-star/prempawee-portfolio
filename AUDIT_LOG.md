@@ -35,6 +35,64 @@ The deployment is fine, it just lives under Vercel's `production` slot for this 
 - ✅ **GitHub integration live with auto-deploy** — private repo at https://github.com/premkung87-star/prempawee-portfolio linked to the Vercel project, `main` is the production branch, `git push` triggers auto-deploys.
   - **One caveat:** repo is currently **public**, not private. Vercel's Hobby plan rejects commits from authors whose email isn't on the team owner's verified account list; my local git identity (`premmynotnerdyboy@...local`) doesn't match, so private deploys were blocked with empty error logs. Flipping the repo to public bypasses the collaboration check (collaboration is free for public repos per Vercel docs). Code was scanned clean before push — no secrets in any commit. To get it back to private, either (a) upgrade Vercel to Pro, or (b) set your global git identity to `premkung87@gmail.com` so future commits are attributed to your Vercel-linked GitHub account.
 
+### 👑 WORLD-CLASS PATH-A — 2026-04-17 evening — all 34 Critical+High items shipped
+
+Follow-up to the `/ultrareview` audit: executed Path-A (ship ALL Critical +
+High findings) across 7 batches. 116 raw findings → 60 unique items → 34 in
+scope (Critical 12 + High 22) → all production-live.
+
+**Live at https://prempawee.com**. Verification suite:
+- HTTP 200, HSTS preload 2yr, CSP tight (no unsafe-eval)
+- Sitemap with hreflang en/th/x-default for every indexed URL
+- robots.txt explicit allow-list for GPTBot/ClaudeBot/PerplexityBot etc.
+- JSON-LD @graph with 4 schemas: WebSite + Person + ProfessionalService
+  (full OfferCatalog for 3 packages) + FAQPage (4 canonical Q&A)
+- Trust ticker live under header: `📍 Chiang Mai · ⚡ Reply 2-4h · 🏆 3 live
+  bots · 🤖 Claude-powered`
+- Contact CTA button in header (opens prefilled mailto)
+- 3 suggested prompt chips (EN + TH) before first user turn
+- Error banner has Retry button + See-Offline-Portfolio fallback link
+- Full Thai UI: welcome, placeholder, prompts, consent, trust ticker, skip
+  link, "AI ออนไลน์" status label; `<html lang>` syncs on toggle; URL
+  `?lang=th` persists to localStorage
+- WCAG contrast fixed: placeholder 1.65:1 → 5.37:1, "AI Online" 2.13:1 →
+  9+:1, tertiary #666 → #888 throughout
+- Focus-visible 2px rings globally; reduced-motion zeros every animation
+- `<main>` landmark + skip link + role="status" on live regions
+- RAG cache now 2-tier (L1 30s per-isolate + L2 Upstash 5min global) so
+  /api/revalidate actually invalidates across all edge isolates
+- Rate-limit degraded mode: Upstash outage → 60s restricted (1 req/30s/IP)
+  instead of full-open fallback — abuse ceiling preserved during incidents
+- onError + onAbort wired on streamText → mid-stream failures + abandoned
+  sessions now both captured in Sentry + FinOps
+- Session-ID: invalid patterns log warn with shape prefix, generate
+  crypto.randomUUID, return via X-Session-Id response header
+- Log conversation + log analytics now use service-role admin client →
+  immune to public-RLS drift
+- Embeddings: Voyage zero-padding fallback removed (was corrupting cosine
+  similarity); OpenAI-only
+- Feature flags: `rag_semantic_retrieval` + `suggested_prompts` added to
+  FlagKey union; `as never` hack dropped
+- Single SITE_URL source-of-truth file imports consistently everywhere
+- Seed SQL aligned with live RAG: "6 web properties" + "largest project"
+- Tests: 26 → **43 green** (+6 /api/revalidate auth, +6 embeddings paths,
+  +6 middleware CSRF)
+- Build: 17 routes, middleware active, revalidate=1y on OG/manifest/twitter,
+  revalidate=30 on /status, all SSR pages edge-hit-capable
+
+**Deferred** (flagged but not in Path-A scope):
+- Chat client chunk 124KB br → bundle-analyzer audit for future pass
+- CSP strict-dynamic + nonce — Turbopack auto-injection still broken (§17)
+- `/api/chat/route.ts` 494-line split into modules — pure refactor
+- Favicon → app/icon.png convention — cosmetic
+- Vercel WAF + BotID dashboard toggle — Pro plan active, code wired, just
+  needs the Firewall tab toggle
+
+**Still user-action to reach visible 100 across the board:**
+- Submit to HSTS preload: https://hstspreload.org/?domain=prempawee.com
+- SSL Labs audit screenshot: https://www.ssllabs.com/ssltest/analyze.html?d=prempawee.com
+- Sentry alert rules (3): per docs/SSS_STATUS.md
+
 ### 🏆 SSS FULLY LIVE — 2026-04-17 late afternoon
 
 All 10 SSS Path-A items now active in production. Live URL:
