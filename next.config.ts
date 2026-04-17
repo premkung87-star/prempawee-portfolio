@@ -5,17 +5,6 @@ const nextConfig: NextConfig = {
   // Strip the X-Powered-By: Next.js fingerprint
   poweredByHeader: false,
 
-  // Experimental SRI — adds integrity="sha256-..." attributes to every
-  // Next.js-generated <script> tag at build time. Together with the
-  // CSP script-src 'self' in src/proxy.ts (no unsafe-inline), this
-  // gives us A+ on Mozilla Observatory + securityheaders.com without
-  // forcing dynamic rendering (nonces would).
-  experimental: {
-    sri: {
-      algorithm: "sha256",
-    },
-  },
-
   // Security headers applied to all routes
   async headers() {
     return [
@@ -45,11 +34,10 @@ const nextConfig: NextConfig = {
             value:
               "camera=(), microphone=(), geolocation=(), interest-cohort=(), browsing-topics=()",
           },
-          // NOTE: Content-Security-Policy is injected by src/proxy.ts per
-          // request. Drops 'unsafe-inline' from script-src; experimental.sri
-          // above hashes every Next.js-generated script so the browser can
-          // verify integrity against CSP 'self'. Do NOT re-add a static CSP
-          // here — it would collide with the dynamic one.
+          // NOTE: Content-Security-Policy is now injected by src/middleware.ts
+          // per request so a nonce can be used (replaces the old 'unsafe-inline'
+          // script-src dependency). Do NOT re-add a static CSP here — it would
+          // collide with the dynamic one.
           {
             // 2 years max-age + includeSubDomains + preload. Submit to
             // https://hstspreload.org once a custom domain is attached
