@@ -27,7 +27,12 @@ if (dsn) {
       }),
     ],
 
-    // Filter out noise
+    // Filter out noise. DO NOT add hydration errors here — §20 paid that
+    // lesson in full. `Hydration failed` was previously filtered with a
+    // comment saying "in dev", but the filter ran in production too and
+    // silently suppressed the exact signal we needed during the 2026-04-17
+    // CSP-A+ rollout. Keep every client-boundary failure visible; noise is
+    // cheap, blind spots are expensive.
     ignoreErrors: [
       // Browser extensions
       "top.GLOBALS",
@@ -35,8 +40,6 @@ if (dsn) {
       "Network request failed",
       "NetworkError",
       "Failed to fetch",
-      // React hydration warnings in dev
-      /Hydration failed/,
     ],
 
     // Sample rate for error events (1.0 = all errors reported)

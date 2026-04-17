@@ -10,6 +10,9 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:install": "playwright install --with-deps chromium",
     "eval:rag": "node --env-file=.env.local scripts/eval-rag.mjs",
     "kb:refresh": "node --env-file=.env.local scripts/refresh-knowledge-base.mjs",
     "kb:embed": "node --env-file=.env.local scripts/generate-embeddings.mjs",
@@ -33,6 +36,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@playwright/test": "^1.59.1",
     "@tailwindcss/postcss": "^4",
     "@testing-library/react": "^16.3.2",
     "@types/node": "^20",

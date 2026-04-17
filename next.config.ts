@@ -5,6 +5,18 @@ const nextConfig: NextConfig = {
   // Strip the X-Powered-By: Next.js fingerprint
   poweredByHeader: false,
 
+  // NOTE ON `experimental.sri`: deliberately NOT enabled. See AUDIT_LOG §20
+  // + open Next.js issue vercel/next.js#91633. Enabling it on Next 16 +
+  // Turbopack + Vercel causes SILENT React 19 hydration failure because
+  // Vercel's CDN re-encodes responses (Brotli/gzip) after build-time
+  // hashing, invalidating every integrity= attribute. Chrome blocks the
+  // client-runtime chunk with zero console output → no useEffect fires →
+  // no onClick attaches → the site looks rendered but is completely dead.
+  // We hit this on 2026-04-17 and lost 3 hours to it. Revisit when #91633
+  // closes. A+ grades on Mozilla Observatory (+25 bonus for strict CSP)
+  // and securityheaders.com are already achieved via nonce + strict-dynamic
+  // alone — SRI was only ever redundant bonus points.
+
   // Security headers applied to all routes
   async headers() {
     return [
@@ -34,10 +46,9 @@ const nextConfig: NextConfig = {
             value:
               "camera=(), microphone=(), geolocation=(), interest-cohort=(), browsing-topics=()",
           },
-          // NOTE: Content-Security-Policy is now injected by src/middleware.ts
-          // per request so a nonce can be used (replaces the old 'unsafe-inline'
-          // script-src dependency). Do NOT re-add a static CSP here — it would
-          // collide with the dynamic one.
+          // NOTE: Content-Security-Policy is injected by src/proxy.ts per
+          // request with a per-request nonce + 'strict-dynamic'. Do NOT
+          // re-add a static CSP here — it would collide with the dynamic one.
           {
             // 2 years max-age + includeSubDomains + preload. Submit to
             // https://hstspreload.org once a custom domain is attached

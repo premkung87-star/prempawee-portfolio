@@ -1,17 +1,20 @@
-// Edge middleware: per-request CSP nonce + CSRF origin check + Vercel BotID.
+// Proxy (formerly middleware pre-Next.js 16): per-request CSP nonce,
+// CSRF origin check, Vercel BotID.
 //
-// Replaces the static CSP header previously set in next.config.ts. The nonce
-// pattern removes the `'unsafe-inline'` script-src dependency and is the
-// recommended posture per the Next.js CSP guide.
+// Renamed from middleware.ts per the Next.js 16 deprecation. Runs on the
+// Node.js runtime (edge is not supported in proxy). This rename is what
+// unlocks proper nonce propagation — under the old `middleware.ts` +
+// Turbopack path (AUDIT_LOG §17), nonces never reached framework-
+// generated <script> tags and CSP `strict-dynamic` silently blocked 100%
+// of scripts. The Node.js proxy runtime injects nonces into the SSR
+// output correctly, so we can finally drop `'unsafe-inline'`.
 //
-// Enforces a same-origin check for state-changing requests (POST/PUT/
-// PATCH/DELETE) against known Vercel/localhost origins to provide a light
-// CSRF defense for the /api/* surface.
-//
-// Invokes Vercel BotID on expensive endpoints (/api/chat, /api/leads) to
-// block automated abuse. BotID is Pro-plan — when unavailable the check
-// silently passes through, so this code is safe to ship on Hobby and
-// activates on upgrade.
+// Combined with experimental.sri in next.config.ts (adds integrity=
+// sha256 to every Next.js-built script), the CSP is:
+//   - nonce-based for inline + dynamically imported scripts
+//   - integrity-based for build-time scripts
+//   - strict-dynamic so nonce'd loaders can transitively trust their
+//     own chunk imports without us listing every hash.
 
 import { NextRequest, NextResponse } from "next/server";
 
@@ -19,9 +22,6 @@ import { NextRequest, NextResponse } from "next/server";
 // Hobby-plan absence. Returns { isBot: boolean } or null when unavailable.
 async function runBotCheck(): Promise<{ isBot: boolean } | null> {
   try {
-    // @vercel/firewall exports evolved across versions; look up checkBotId
-    // dynamically. On Hobby / unavailable, the import itself succeeds but
-    // the function returns a no-op verdict that we treat as "allow."
     const mod = (await import("@vercel/firewall")) as unknown as {
       checkBotId?: () => Promise<{ isBot?: boolean }>;
     };
@@ -47,22 +47,15 @@ const CSRF_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 // Expensive endpoints that are worth spending a BotID check on
 const BOT_PROTECTED_PATHS = ["/api/chat", "/api/leads"];
 
-function buildCsp(_nonce: string, isDev: boolean): string {
+function buildCsp(nonce: string, isDev: boolean): string {
   if (isDev) {
-    // CSP disabled in development (React needs eval for debugging)
+    // CSP disabled in development (React/Turbopack need eval + inline
+    // for debugging + HMR).
     return "";
   }
-  // Using 'unsafe-inline' for script-src because Next.js 16 + Turbopack
-  // does not propagate middleware-set nonces to its auto-generated script
-  // chunks (verified empirically: every <script> tag in the SSR HTML ships
-  // without a nonce attribute, so 'strict-dynamic' with nonces blocks 100%
-  // of scripts and React never hydrates). This is the same posture most
-  // production Next.js apps ship with — strong on everything BUT inline-
-  // script risk. Revisit once Turbopack gets proper nonce auto-injection.
-  // See: https://nextjs.org/docs/app/guides/content-security-policy
   const directives = [
     `default-src 'self'`,
-    `script-src 'self' 'unsafe-inline' https://va.vercel-scripts.com`,
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' https://va.vercel-scripts.com`,
     `style-src 'self' 'unsafe-inline'`,
     `connect-src 'self' https://*.supabase.co https://api.anthropic.com https://*.upstash.io https://va.vercel-scripts.com https://vitals.vercel-insights.com`,
     `img-src 'self' data: blob: https://*.sentry.io`,
@@ -71,16 +64,20 @@ function buildCsp(_nonce: string, isDev: boolean): string {
     `base-uri 'self'`,
     `form-action 'self'`,
     `worker-src 'self' blob:`,
+    // CSP-level-2 violation reporter. Any blocked inline script, integrity
+    // mismatch, or directive violation POSTs to /api/csp-report and lands
+    // in our structured logs. Had this existed on 2026-04-17 we'd have seen
+    // the SRI-hash mismatch in real time instead of via browser devtools.
+    `report-uri /api/csp-report`,
   ];
   return directives.join("; ");
 }
 
 function isAllowedOrigin(origin: string | null): boolean {
-  if (!origin) return true; // no origin (e.g. same-origin navigation) is fine
+  if (!origin) return true;
   try {
     const host = new URL(origin).host;
     if (ALLOWED_ORIGIN_HOSTS.includes(host)) return true;
-    // Accept Vercel auto-generated preview URLs from this project
     if (/^prempawee-portfolio-[a-z0-9-]+\.vercel\.app$/.test(host)) return true;
     return false;
   } catch {
@@ -88,11 +85,10 @@ function isAllowedOrigin(origin: string | null): boolean {
   }
 }
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const isDev = process.env.NODE_ENV === "development";
-  const nonce = crypto.randomUUID().replaceAll("-", "");
+  const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
 
-  // --- CSRF check for state-changing API requests ---
   if (CSRF_METHODS.has(req.method) && req.nextUrl.pathname.startsWith("/api/")) {
     const origin = req.headers.get("origin");
     if (!isAllowedOrigin(origin) && !isDev) {
@@ -103,10 +99,6 @@ export async function middleware(req: NextRequest) {
     }
   }
 
-  // --- Vercel BotID on expensive endpoints ---
-  // BotID is Pro-plan only — dynamic import so the build doesn't require
-  // a specific @vercel/firewall API shape. When unavailable the check
-  // returns null and we pass through. Upstash rate limiter is the backup.
   if (
     !isDev &&
     req.method === "POST" &&
@@ -121,9 +113,12 @@ export async function middleware(req: NextRequest) {
     }
   }
 
-  // --- CSP with per-request nonce ---
   const csp = buildCsp(nonce, isDev);
 
+  // The nonce must be exposed upstream so layout.tsx can read it via
+  // headers() and pass it to <Analytics>, <SpeedInsights>, and the JSON-LD
+  // <script>. Next.js also parses the Content-Security-Policy request
+  // header itself to auto-inject the nonce into framework scripts.
   const requestHeaders = new Headers(req.headers);
   requestHeaders.set("x-nonce", nonce);
   if (csp) {
@@ -139,7 +134,15 @@ export async function middleware(req: NextRequest) {
 
 export const config = {
   matcher: [
-    // Skip static assets and image-optimization internals
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|gif|webp|svg|ico|css|js|map)$).*)",
+    // Match everything except static assets and image-optimization internals.
+    // Critical: DO NOT exclude the homepage — proxy must run on / for the
+    // nonce pipeline to work there.
+    {
+      source: "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|gif|webp|svg|ico|css|js|map)$).*)",
+      missing: [
+        { type: "header", key: "next-router-prefetch" },
+        { type: "header", key: "purpose", value: "prefetch" },
+      ],
+    },
   ],
 };
