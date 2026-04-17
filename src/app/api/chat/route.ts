@@ -7,10 +7,10 @@ import {
 } from "ai";
 import { z } from "zod";
 import {
-  getAllKnowledge,
-  formatKnowledgeForPrompt,
+  getKnowledgeContext,
   logConversation,
   logAnalytics,
+  insertLead,
 } from "@/lib/supabase";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 import { logError, logInfo, logWarn } from "@/lib/logger";
@@ -49,7 +49,8 @@ BEHAVIOR RULES:
 TOOL USAGE — CRITICAL:
 - When a visitor asks about portfolio, work, past projects, examples, or "what have you built" in ANY language — including Thai phrases like "ผลงาน", "มีผลงานอะไรบ้าง", "นายมีผลงานอะไร", "เคยทำอะไรมา", "ตัวอย่างงาน", "โปรเจกต์ของคุณ" — ALWAYS call show_portfolio FIRST. It displays the full breadth: 3 projects, 6 web properties, 1 LINE bot. Never lead with a single case study for a general portfolio question.
 - Call show_case_study ONLY when the visitor asks for deep detail on a SPECIFIC project by name (e.g., "tell me more about VerdeX", "เล่าเรื่อง VerdeX", "what did you build for NWL?", "โปรเจกต์ NWL เป็นยังไง"). Pass project="verdex" or project="nwl_club". There is NO deep-dive card for this portfolio site itself — if asked about it, answer conversationally without a tool call.
-- Call show_pricing for cost/rates/packages questions. Call show_tech_stack for technical or architecture questions. Call show_contact when they want to get in touch.
+- Call show_pricing for cost/rates/packages questions. Call show_tech_stack for technical or architecture questions. Call show_contact when they want to get in touch but haven't committed.
+- Call capture_lead ONLY after the visitor has clearly expressed intent to hire AND given at least one contact method (email OR LINE ID). Pass whatever structured detail they shared (business_type, package_interest, message). This actually records them as a lead Prempawee will follow up with. If they're still exploring, prefer show_contact instead.
 - Prefer a single relevant tool call per turn. Do not stack tools.
 
 HANDLING EDGE CASES:
@@ -65,20 +66,41 @@ CONTACT INFO:
 
 IMPORTANT: The knowledge base below is your source of truth. All information about Prempawee's projects, skills, packages, and background comes from this database. Do not invent details beyond what is provided.`;
 
-// Cache knowledge base for 5 minutes to reduce DB calls
-let knowledgeCache: { data: string; timestamp: number } | null = null;
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+// Knowledge-base cache + getKnowledgeContext live in @/lib/supabase so the
+// /api/revalidate route can invalidate it without an import cycle.
 
-async function getKnowledgeContext(): Promise<string> {
-  const now = Date.now();
-  if (knowledgeCache && now - knowledgeCache.timestamp < CACHE_TTL) {
-    return knowledgeCache.data;
+// Optional outbound webhook for lead notifications (Slack/Discord/n8n/etc).
+// When a new lead is captured, POSTs the payload as JSON to this URL.
+// If unset, leads still save to DB; this only controls the notification path.
+async function notifyNewLead(lead: {
+  id?: number;
+  name?: string | null;
+  email?: string | null;
+  line_id?: string | null;
+  business_type?: string | null;
+  package_interest?: string | null;
+  message?: string | null;
+}) {
+  const url = process.env.NOTIFICATION_WEBHOOK_URL;
+  if (!url) return;
+  try {
+    await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        event: "lead.captured",
+        site: "prempawee-portfolio",
+        timestamp: new Date().toISOString(),
+        lead,
+      }),
+      // Short timeout — notification shouldn't block the user response
+      signal: AbortSignal.timeout(3000),
+    });
+  } catch (err) {
+    logWarn("notify.webhook.failed", {
+      error: err instanceof Error ? err.message : String(err),
+    });
   }
-
-  const entries = await getAllKnowledge();
-  const formatted = formatKnowledgeForPrompt(entries);
-  knowledgeCache = { data: formatted, timestamp: now };
-  return formatted;
 }
 
 export async function POST(req: Request) {
@@ -252,6 +274,102 @@ export async function POST(req: Request) {
         }),
         execute: async () => {
           return { displayed: "contact" };
+        },
+      }),
+      capture_lead: tool({
+        description:
+          "Save a qualified lead to the database. Call this ONLY after the visitor has explicitly expressed interest in working together AND you have collected at least one contact method (email OR LINE ID) plus, ideally, their business type and which package they're considering. Do NOT call this for idle curiosity or general questions. Call show_contact first if they're just exploring. In ANY language: Thai keywords include 'สนใจ', 'อยากจ้าง', 'เอาแพ็คเกจ', 'ติดต่อ' when paired with their contact info. Returns a confirmation card rendered to the visitor.",
+        inputSchema: z.object({
+          name: z
+            .string()
+            .max(200)
+            .optional()
+            .describe("Visitor's name (optional)"),
+          email: z
+            .string()
+            .email()
+            .max(320)
+            .optional()
+            .describe("Email address (preferred contact)"),
+          line_id: z
+            .string()
+            .max(100)
+            .optional()
+            .describe("LINE ID or phone number"),
+          business_type: z
+            .string()
+            .max(100)
+            .optional()
+            .describe(
+              "What their business is (e.g. 'e-commerce store', 'restaurant', 'streetwear brand')",
+            ),
+          package_interest: z
+            .enum(["starter", "pro", "enterprise"])
+            .optional()
+            .describe(
+              "Which pricing tier they're leaning toward, if mentioned",
+            ),
+          message: z
+            .string()
+            .max(2000)
+            .optional()
+            .describe(
+              "Short summary of what they want — project goals, timeline, budget range, anything specific they mentioned",
+            ),
+        }),
+        execute: async (input) => {
+          if (!input.email && !input.line_id) {
+            return {
+              displayed: "lead_error",
+              error: "missing_contact",
+              message:
+                "I need at least an email or LINE ID to record your interest. Could you share one of those?",
+            };
+          }
+          const result = await insertLead({
+            name: input.name ?? null,
+            email: input.email ?? null,
+            line_id: input.line_id ?? null,
+            business_type: input.business_type ?? null,
+            package_interest: input.package_interest ?? null,
+            message: input.message ?? null,
+            source: "chat_tool",
+          });
+          if (!result.ok) {
+            logError("chat.capture_lead.failed", {
+              error: result.error,
+              hasEmail: !!input.email,
+              hasLine: !!input.line_id,
+            });
+            return {
+              displayed: "lead_error",
+              error: "save_failed",
+              message:
+                "I couldn't save that right now. Please reach Prempawee directly — prempaweet20@gmail.com",
+            };
+          }
+          // Fire-and-forget webhook notification
+          notifyNewLead({
+            id: result.id,
+            name: input.name,
+            email: input.email,
+            line_id: input.line_id,
+            business_type: input.business_type,
+            package_interest: input.package_interest,
+            message: input.message,
+          });
+          logInfo("chat.capture_lead.saved", {
+            id: result.id,
+            package_interest: input.package_interest,
+          });
+          return {
+            displayed: "lead_captured",
+            id: result.id,
+            name: input.name ?? null,
+            email: input.email ?? null,
+            line_id: input.line_id ?? null,
+            package_interest: input.package_interest ?? null,
+          };
         },
       }),
     },

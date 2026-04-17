@@ -156,6 +156,71 @@ export async function logAnalytics(
 }
 
 /**
+ * Insert a lead (service-role required). Mirrors the DB-level CHECK
+ * constraints from migration 001_hardening.sql. Returns the new row id.
+ */
+export type LeadInput = {
+  name?: string | null;
+  email?: string | null;
+  line_id?: string | null;
+  business_type?: string | null;
+  package_interest?: "starter" | "pro" | "enterprise" | null;
+  message?: string | null;
+  source?: string | null;
+};
+
+export async function insertLead(
+  input: LeadInput,
+): Promise<{ ok: boolean; id?: number; error?: string }> {
+  if (!supabaseAdmin) {
+    return { ok: false, error: "service_role_not_configured" };
+  }
+  const { data, error } = await supabaseAdmin
+    .from("leads")
+    .insert({
+      name: input.name?.slice(0, 200) ?? null,
+      email: input.email?.slice(0, 320) ?? null,
+      line_id: input.line_id?.slice(0, 100) ?? null,
+      business_type: input.business_type?.slice(0, 100) ?? null,
+      package_interest: input.package_interest ?? null,
+      message: input.message?.slice(0, 2000) ?? null,
+      source: input.source?.slice(0, 100) ?? "portfolio_chat",
+    })
+    .select("id")
+    .single();
+  if (error) {
+    logError("supabase.leads.insert.failed", {
+      error: { message: error.message, code: error.code },
+    });
+    return { ok: false, error: error.message };
+  }
+  return { ok: true, id: data.id };
+}
+
+// ---------------------------------------------------------------------------
+// RAG knowledge-base cache (moved from src/app/api/chat/route.ts so that
+// /api/revalidate can invalidate it without an import cycle).
+// ---------------------------------------------------------------------------
+
+let knowledgeCache: { data: string; timestamp: number } | null = null;
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+export async function getKnowledgeContext(): Promise<string> {
+  const now = Date.now();
+  if (knowledgeCache && now - knowledgeCache.timestamp < CACHE_TTL) {
+    return knowledgeCache.data;
+  }
+  const entries = await getAllKnowledge();
+  const formatted = formatKnowledgeForPrompt(entries);
+  knowledgeCache = { data: formatted, timestamp: now };
+  return formatted;
+}
+
+export function clearKnowledgeCache(): void {
+  knowledgeCache = null;
+}
+
+/**
  * Format knowledge entries into context for Claude's system prompt.
  */
 export function formatKnowledgeForPrompt(entries: KnowledgeEntry[]): string {

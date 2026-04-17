@@ -8,6 +8,7 @@ import {
   CaseStudyCard,
   TechStackCard,
   ContactCard,
+  LeadCaptureCard,
 } from "./tool-results";
 
 const MAX_MESSAGES = 20;
@@ -213,6 +214,32 @@ export function Chat() {
                 return <TechStackCard key={partKey} />;
               if (part.type === "tool-show_contact")
                 return <ContactCard key={partKey} />;
+              if (part.type === "tool-capture_lead") {
+                // Read the `output` (tool result), not the input. Support
+                // both `output` (v6 canonical) and `result` (v5 alias).
+                const p = part as unknown as Record<string, unknown>;
+                const output = (p.output ?? p.result ?? {}) as {
+                  id?: number;
+                  name?: string | null;
+                  email?: string | null;
+                  line_id?: string | null;
+                  package_interest?: string | null;
+                  error?: string;
+                  message?: string;
+                };
+                return (
+                  <LeadCaptureCard
+                    key={partKey}
+                    id={output.id}
+                    name={output.name}
+                    email={output.email}
+                    line_id={output.line_id}
+                    package_interest={output.package_interest}
+                    error={output.error}
+                    message={output.message}
+                  />
+                );
+              }
 
               return null;
             })}

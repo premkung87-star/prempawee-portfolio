@@ -282,6 +282,80 @@ export function TechStackCard() {
   );
 }
 
+export function LeadCaptureCard({
+  id,
+  name,
+  email,
+  line_id,
+  package_interest,
+  error,
+  message,
+}: {
+  id?: number;
+  name?: string | null;
+  email?: string | null;
+  line_id?: string | null;
+  package_interest?: string | null;
+  error?: string;
+  message?: string;
+}) {
+  if (error) {
+    return (
+      <div className="my-3 border border-red-500/20 rounded p-4 bg-red-500/5">
+        <span className="text-[10px] uppercase tracking-[2px] text-red-400 block mb-2">
+          Lead capture · issue
+        </span>
+        <p className="text-[13px] text-red-300 leading-relaxed">
+          {message ??
+            "Something went wrong saving your info. Please reach out directly."}
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="my-3 border border-white/20 rounded p-4 bg-white/[0.04]">
+      <span className="text-[10px] uppercase tracking-[2px] text-[#aaa] block mb-2">
+        Lead recorded · confirmation #{id ?? "–"}
+      </span>
+      <p className="text-[13px] text-white leading-relaxed mb-3">
+        {name ? `Thanks, ${name}. ` : "Thanks. "}
+        Your interest has been logged. Prempawee will reach out shortly
+        {CONTACT.responseTime ? ` (typically within ${CONTACT.responseTime})` : ""}.
+      </p>
+      <div className="space-y-1 text-xs text-[#aaa]">
+        {email ? (
+          <div>
+            <span className="text-[#666]">Email:</span>{" "}
+            <span className="text-[#ccc]">{email}</span>
+          </div>
+        ) : null}
+        {line_id ? (
+          <div>
+            <span className="text-[#666]">LINE:</span>{" "}
+            <span className="text-[#ccc]">{line_id}</span>
+          </div>
+        ) : null}
+        {package_interest ? (
+          <div>
+            <span className="text-[#666]">Interested in:</span>{" "}
+            <span className="text-[#ccc] uppercase">{package_interest}</span>
+          </div>
+        ) : null}
+      </div>
+      <p className="text-[11px] text-[#888] mt-3 pt-3 border-t border-white/5">
+        If you need immediate contact:{" "}
+        <a
+          href={`mailto:${CONTACT.email}`}
+          className="text-[#ccc] underline underline-offset-2 decoration-white/20 hover:decoration-white/60"
+        >
+          {CONTACT.email}
+        </a>
+      </p>
+    </div>
+  );
+}
+
 export function ContactCard() {
   return (
     <div className="my-3 border border-white/10 rounded p-4 bg-white/[0.02]">
