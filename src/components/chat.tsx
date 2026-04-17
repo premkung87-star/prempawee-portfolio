@@ -17,56 +17,6 @@ import {
 } from "@/lib/portfolio-data";
 
 const MAX_MESSAGES = 20;
-// Server accepts /^[a-zA-Z0-9-]{1,64}$/ — UUIDs qualify.
-const SESSION_ID_RE = /^[a-zA-Z0-9-]{1,64}$/;
-const SESSION_STORAGE_KEY = "chat-session-id";
-
-// Session-ID persistence WITHOUT touching useChat's transport (which broke
-// hydration in §20). Monkey-patch fetch globally on mount: any POST to
-// /api/chat gets x-session-id injected from localStorage. Reverted at
-// unmount. Safe because we only augment headers; body/method stay untouched.
-function installSessionIdFetchOverride() {
-  if (typeof window === "undefined") return () => {};
-  const original = window.fetch;
-  function getOrCreateSid(): string {
-    try {
-      let sid = localStorage.getItem(SESSION_STORAGE_KEY);
-      if (!sid || !SESSION_ID_RE.test(sid)) {
-        sid = crypto.randomUUID();
-        localStorage.setItem(SESSION_STORAGE_KEY, sid);
-      }
-      return sid;
-    } catch {
-      return "";
-    }
-  }
-  const patched: typeof fetch = async (input, init) => {
-    try {
-      const url =
-        typeof input === "string"
-          ? input
-          : input instanceof URL
-            ? input.href
-            : (input as Request).url;
-      const method = (init?.method || (input as Request)?.method || "GET").toUpperCase();
-      if (method === "POST" && url.includes("/api/chat")) {
-        const sid = getOrCreateSid();
-        if (sid) {
-          const headers = new Headers(init?.headers || (input as Request)?.headers);
-          headers.set("x-session-id", sid);
-          init = { ...(init || {}), headers };
-        }
-      }
-    } catch {
-      // never let the override break the underlying fetch
-    }
-    return original(input as RequestInfo, init);
-  };
-  window.fetch = patched;
-  return () => {
-    if (window.fetch === patched) window.fetch = original;
-  };
-}
 
 // Support both AI SDK v5 `args` and v6 `input` on tool parts.
 // Returns an empty object if neither exists or they aren't plain objects.
@@ -82,20 +32,6 @@ function readToolInput<T extends Record<string, unknown>>(part: unknown): T {
 
 export function Chat() {
   const { messages, sendMessage, status, error } = useChat();
-
-  // Install the fetch override that injects x-session-id on /api/chat POSTs.
-  // Uninstalls on unmount so it never leaks between component lifecycles.
-  useEffect(() => {
-    return installSessionIdFetchOverride();
-  }, []);
-
-  // TEMPORARY debug beacon — flags when Chat's useEffect actually runs on
-  // the client, proving React hydrated this component. The inline debug
-  // reporter in layout.tsx polls window.__CHAT_MOUNTED and reports the
-  // result. Remove when the hydration-bug diagnosis lands.
-  useEffect(() => {
-    (window as unknown as { __CHAT_MOUNTED?: boolean }).__CHAT_MOUNTED = true;
-  }, []);
 
   const [input, setInput] = useState("");
   const [consented, setConsented] = useState(false);
@@ -417,7 +353,7 @@ export function Chat() {
               if (part.type === "tool-show_tech_stack")
                 return <TechStackCard key={partKey} />;
               if (part.type === "tool-show_contact")
-                return <ContactCard key={partKey} lang={lang} />;
+                return <ContactCard key={partKey} />;
               if (part.type === "tool-capture_lead") {
                 // Read the `output` (tool result), not the input. Support
                 // both `output` (v6 canonical) and `result` (v5 alias).
