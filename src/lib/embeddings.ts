@@ -19,9 +19,16 @@ export type EmbeddingResult = {
   tokens: number;
 };
 
+// Negative cache: once OpenAI returns 429 insufficient_quota, back off for
+// N minutes instead of hammering the API + spamming Sentry with the same
+// non-actionable error. Module-scoped so it persists across warm invocations.
+let openaiBackoffUntil = 0;
+const OPENAI_BACKOFF_MS = 10 * 60 * 1000; // 10 min
+
 async function embedOpenAI(text: string): Promise<EmbeddingResult | null> {
   const key = process.env.OPENAI_API_KEY;
   if (!key) return null;
+  if (Date.now() < openaiBackoffUntil) return null;
   try {
     const res = await fetch("https://api.openai.com/v1/embeddings", {
       method: "POST",
@@ -36,6 +43,15 @@ async function embedOpenAI(text: string): Promise<EmbeddingResult | null> {
       }),
       signal: AbortSignal.timeout(5000),
     });
+    if (res.status === 429) {
+      // Quota / rate limit — flip negative cache, warn (not error) once.
+      openaiBackoffUntil = Date.now() + OPENAI_BACKOFF_MS;
+      logWarn("embeddings.openai.quota-exceeded", {
+        cooldown_minutes: OPENAI_BACKOFF_MS / 60_000,
+        hint: "Add credit at platform.openai.com/settings/organization/billing",
+      });
+      return null;
+    }
     if (!res.ok) {
       const body = await res.text().catch(() => "");
       logError("embeddings.openai.http-error", {
