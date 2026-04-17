@@ -232,14 +232,17 @@ export default async function RootLayout({
             __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c"),
           }}
         />
-        {/* TEMPORARY: on-screen error reporter so we can diagnose a hydration
-            crash from outside the browser. Runs before React, captures window
-            errors + unhandled rejections, and paints a red banner with the
-            message. Remove once the hydration bug is traced and fixed. */}
+        {/* TEMPORARY: on-screen error reporter. Catches window errors,
+            unhandled rejections, AND console.error/warn (React hydration
+            warnings come through console.error, NOT window.error). Also
+            paints a green badge when client JS first executes, and a blue
+            badge when any DOMContentLoaded listener runs — so we can tell
+            "JS ran but React didn't hydrate" from "JS never ran." Remove
+            once the hydration bug is traced and fixed. */}
         <script
           nonce={nonce}
           dangerouslySetInnerHTML={{
-            __html: `(function(){var log=function(kind,msg){try{var d=document.createElement('div');d.style.cssText='position:fixed;top:0;left:0;right:0;background:#b00;color:#fff;padding:8px;z-index:99999;font-family:monospace;font-size:11px;white-space:pre-wrap;word-break:break-word;max-height:40vh;overflow:auto;border-bottom:2px solid #f66';d.textContent='['+kind+'] '+msg;document.body.appendChild(d);}catch(e){}};window.addEventListener('error',function(e){log('ERROR',(e.message||'')+' @ '+(e.filename||'?')+':'+(e.lineno||'?')+':'+(e.colno||'?'));});window.addEventListener('unhandledrejection',function(e){var r=e.reason;var m=r&&r.message?r.message:String(r);log('UNHANDLED',m);});})();`,
+            __html: `(function(){var msgs=[];var rendered=false;var panel=null;function ensure(){if(rendered)return;try{if(!document.body)return;rendered=true;panel=document.createElement('div');panel.style.cssText='position:fixed;top:0;left:0;right:0;z-index:99999;font-family:monospace;font-size:11px;max-height:50vh;overflow:auto;border-bottom:2px solid #666';document.body.appendChild(panel);paint();}catch(e){}}function paint(){if(!panel)return;panel.innerHTML='';msgs.slice(-20).forEach(function(m){var d=document.createElement('div');d.style.cssText='padding:4px 8px;border-bottom:1px solid rgba(255,255,255,0.1);white-space:pre-wrap;word-break:break-word;color:#fff;background:'+m.bg;d.textContent='['+m.k+'] '+m.t;panel.appendChild(d);});}function log(k,t,bg){msgs.push({k:k,t:String(t).slice(0,500),bg:bg||'#b00'});if(document.body){ensure();paint();}else{document.addEventListener('DOMContentLoaded',function(){ensure();paint();});}}log('JS','inline script running','#080');window.addEventListener('DOMContentLoaded',function(){log('DOM','DOMContentLoaded fired','#048');});window.addEventListener('load',function(){log('LOAD','window.load fired','#048');});window.addEventListener('error',function(e){log('ERR',(e.message||'')+' @ '+(e.filename||'?')+':'+(e.lineno||'?')+':'+(e.colno||'?'));});window.addEventListener('unhandledrejection',function(e){var r=e.reason;log('REJ',r&&r.message?r.message+' | '+(r.stack||'').split('\\n').slice(0,3).join(' / '):String(r));});var oe=console.error;console.error=function(){try{var a=Array.prototype.slice.call(arguments).map(function(x){if(x&&x.message)return x.message;if(typeof x==='object')return JSON.stringify(x).slice(0,200);return String(x);}).join(' ');log('CONSOLE.ERR',a);}catch(e){}return oe.apply(console,arguments);};var ow=console.warn;console.warn=function(){try{var a=Array.prototype.slice.call(arguments).map(function(x){if(x&&x.message)return x.message;if(typeof x==='object')return JSON.stringify(x).slice(0,200);return String(x);}).join(' ');log('CONSOLE.WARN',a,'#a50');}catch(e){}return ow.apply(console,arguments);};})();`,
           }}
         />
       </head>
