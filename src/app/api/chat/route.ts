@@ -314,20 +314,14 @@ export async function POST(req: Request) {
         durationMs: Date.now() - requestStart,
       });
     },
-    onFinish: ({ usage, providerMetadata, text }) => {
-      // Persist the assistant's final response text alongside the user turn
-      // we logged earlier. Without this, the conversations table captures
-      // only half the thread and we can't review what the bot actually said
-      // to 148 prospects (AUDIT_LOG bug discovered 2026-04-17).
-      if (text && text.trim().length > 0) {
-        logConversation(sessionId, "assistant", text).catch((err) =>
-          logWarn("chat.log.assistant.failed", {
-            error: err instanceof Error ? err.message : String(err),
-          }),
-        );
-      }
-      // Token-usage telemetry for FinOps (/admin/finops dashboard).
-      // providerMetadata.anthropic exposes cache_creation + cache_read counts.
+    onFinish: async ({ usage, providerMetadata, text }) => {
+      // IMPORTANT: this callback MUST be async and MUST await its DB writes.
+      // On edge runtime, fire-and-forget promises inside onFinish are torn
+      // down the moment the response stream closes — that's why only 1 of
+      // 148 prior token_usage events landed, and why assistant messages
+      // never logged. streamText awaits this callback before finalizing the
+      // stream, so awaiting here keeps the worker alive long enough for the
+      // Supabase insert to land.
       const anthropicMeta = (providerMetadata?.anthropic ?? {}) as {
         cacheCreationInputTokens?: number;
         cacheReadInputTokens?: number;
@@ -336,23 +330,45 @@ export async function POST(req: Request) {
       const outputTokens = usage?.outputTokens ?? 0;
       const cacheCreation = anthropicMeta.cacheCreationInputTokens ?? 0;
       const cacheRead = anthropicMeta.cacheReadInputTokens ?? 0;
-      logAnalytics(
-        "token_usage",
-        {
-          model: "claude-sonnet-4-20250514",
-          input_tokens: inputTokens,
-          output_tokens: outputTokens,
-          cache_creation_tokens: cacheCreation,
-          cache_read_tokens: cacheRead,
-          semantic: semanticMeta,
-          duration_ms: Date.now() - requestStart,
-        },
-        sessionId,
-      ).catch((err) =>
-        logWarn("chat.log.token_usage.failed", {
-          error: err instanceof Error ? err.message : String(err),
-        }),
-      );
+
+      // Await both critical writes in parallel so both survive the worker
+      // teardown. Individual failures don't reject the Promise.all — each
+      // write has its own try/catch so one failing (e.g. transient Supabase
+      // 5xx) doesn't prevent the other from landing.
+      await Promise.all([
+        (async () => {
+          if (!text || text.trim().length === 0) return;
+          try {
+            await logConversation(sessionId, "assistant", text);
+          } catch (err) {
+            logWarn("chat.log.assistant.failed", {
+              error: err instanceof Error ? err.message : String(err),
+            });
+          }
+        })(),
+        (async () => {
+          try {
+            await logAnalytics(
+              "token_usage",
+              {
+                model: "claude-sonnet-4-20250514",
+                input_tokens: inputTokens,
+                output_tokens: outputTokens,
+                cache_creation_tokens: cacheCreation,
+                cache_read_tokens: cacheRead,
+                semantic: semanticMeta,
+                duration_ms: Date.now() - requestStart,
+              },
+              sessionId,
+            );
+          } catch (err) {
+            logWarn("chat.log.token_usage.failed", {
+              error: err instanceof Error ? err.message : String(err),
+            });
+          }
+        })(),
+      ]);
+
       logInfo("chat.stream.finished", {
         sessionId,
         input_tokens: inputTokens,
