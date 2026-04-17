@@ -232,6 +232,16 @@ export default async function RootLayout({
             __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c"),
           }}
         />
+        {/* TEMPORARY: on-screen error reporter so we can diagnose a hydration
+            crash from outside the browser. Runs before React, captures window
+            errors + unhandled rejections, and paints a red banner with the
+            message. Remove once the hydration bug is traced and fixed. */}
+        <script
+          nonce={nonce}
+          dangerouslySetInnerHTML={{
+            __html: `(function(){var log=function(kind,msg){try{var d=document.createElement('div');d.style.cssText='position:fixed;top:0;left:0;right:0;background:#b00;color:#fff;padding:8px;z-index:99999;font-family:monospace;font-size:11px;white-space:pre-wrap;word-break:break-word;max-height:40vh;overflow:auto;border-bottom:2px solid #f66';d.textContent='['+kind+'] '+msg;document.body.appendChild(d);}catch(e){}};window.addEventListener('error',function(e){log('ERROR',(e.message||'')+' @ '+(e.filename||'?')+':'+(e.lineno||'?')+':'+(e.colno||'?'));});window.addEventListener('unhandledrejection',function(e){var r=e.reason;var m=r&&r.message?r.message:String(r);log('UNHANDLED',m);});})();`,
+          }}
+        />
       </head>
       <body className="min-h-full flex flex-col bg-[#0a0a0a] text-[#e0e0e0] font-mono antialiased">
         {children}
