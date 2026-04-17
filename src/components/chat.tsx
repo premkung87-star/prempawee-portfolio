@@ -35,38 +35,32 @@ function readToolInput<T extends Record<string, unknown>>(part: unknown): T {
 }
 
 export function Chat() {
-  // Stable per-browser chat session ID, persisted in localStorage so one user's
-  // turns land on a single conversation thread server-side. Without this, each
-  // turn got a fresh server-generated `srv-*` ID and analytics saw every
-  // follow-up as a brand-new stranger (AUDIT_LOG bug discovered 2026-04-17).
-  const [sessionId, setSessionId] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    try {
-      let sid = localStorage.getItem(SESSION_STORAGE_KEY);
-      if (!sid || !SESSION_ID_RE.test(sid)) {
-        sid = crypto.randomUUID();
-        localStorage.setItem(SESSION_STORAGE_KEY, sid);
-      }
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- hydrate from storage
-      setSessionId(sid);
-    } catch {
-      // localStorage disabled — fall back to a fresh per-mount ID.
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- fallback when storage unavailable
-      setSessionId(crypto.randomUUID());
-    }
-  }, []);
-
+  // Stable per-browser chat session ID via a transport with a lazy headers
+  // FUNCTION. Creating the transport instance once (stable reference) avoids
+  // the AI SDK v6 useChat-crash-on-transport-swap that broke hydration and
+  // froze the "I understand" button. The headers fn runs at request time,
+  // reads/creates the UUID in localStorage, and handles SSR (no window).
   const transport = useMemo(
     () =>
-      sessionId
-        ? new DefaultChatTransport({
-            api: "/api/chat",
-            headers: { "x-session-id": sessionId },
-          })
-        : undefined,
-    [sessionId],
+      new DefaultChatTransport({
+        api: "/api/chat",
+        headers: (): Record<string, string> => {
+          if (typeof window === "undefined") return {};
+          try {
+            let sid = localStorage.getItem(SESSION_STORAGE_KEY);
+            if (!sid || !SESSION_ID_RE.test(sid)) {
+              sid = crypto.randomUUID();
+              localStorage.setItem(SESSION_STORAGE_KEY, sid);
+            }
+            return { "x-session-id": sid };
+          } catch {
+            // localStorage disabled (private mode, etc.) — requests go out
+            // without a session header; server falls back to its own srv-*.
+            return {};
+          }
+        },
+      }),
+    [],
   );
 
   const { messages, sendMessage, status, error } = useChat({ transport });
