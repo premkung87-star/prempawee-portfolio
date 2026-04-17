@@ -1,7 +1,8 @@
 "use client";
 
 import { useChat } from "@ai-sdk/react";
-import { useRef, useEffect, useState } from "react";
+import { DefaultChatTransport } from "ai";
+import { useRef, useEffect, useState, useMemo } from "react";
 import {
   PricingCard,
   PortfolioOverviewCard,
@@ -17,6 +18,9 @@ import {
 } from "@/lib/portfolio-data";
 
 const MAX_MESSAGES = 20;
+// Server accepts /^[a-zA-Z0-9-]{1,64}$/ — UUIDs qualify.
+const SESSION_ID_RE = /^[a-zA-Z0-9-]{1,64}$/;
+const SESSION_STORAGE_KEY = "chat-session-id";
 
 // Support both AI SDK v5 `args` and v6 `input` on tool parts.
 // Returns an empty object if neither exists or they aren't plain objects.
@@ -31,7 +35,41 @@ function readToolInput<T extends Record<string, unknown>>(part: unknown): T {
 }
 
 export function Chat() {
-  const { messages, sendMessage, status, error } = useChat();
+  // Stable per-browser chat session ID, persisted in localStorage so one user's
+  // turns land on a single conversation thread server-side. Without this, each
+  // turn got a fresh server-generated `srv-*` ID and analytics saw every
+  // follow-up as a brand-new stranger (AUDIT_LOG bug discovered 2026-04-17).
+  const [sessionId, setSessionId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      let sid = localStorage.getItem(SESSION_STORAGE_KEY);
+      if (!sid || !SESSION_ID_RE.test(sid)) {
+        sid = crypto.randomUUID();
+        localStorage.setItem(SESSION_STORAGE_KEY, sid);
+      }
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- hydrate from storage
+      setSessionId(sid);
+    } catch {
+      // localStorage disabled — fall back to a fresh per-mount ID.
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- fallback when storage unavailable
+      setSessionId(crypto.randomUUID());
+    }
+  }, []);
+
+  const transport = useMemo(
+    () =>
+      sessionId
+        ? new DefaultChatTransport({
+            api: "/api/chat",
+            headers: { "x-session-id": sessionId },
+          })
+        : undefined,
+    [sessionId],
+  );
+
+  const { messages, sendMessage, status, error } = useChat({ transport });
 
   const [input, setInput] = useState("");
   const [consented, setConsented] = useState(false);

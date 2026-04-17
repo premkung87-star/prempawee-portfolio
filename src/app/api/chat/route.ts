@@ -60,7 +60,8 @@ TOOL USAGE — CRITICAL:
 - When a visitor asks about portfolio, work, past projects, examples, or "what have you built" in ANY language — including Thai phrases like "ผลงาน", "มีผลงานอะไรบ้าง", "นายมีผลงานอะไร", "เคยทำอะไรมา", "ตัวอย่างงาน", "โปรเจกต์ของคุณ" — ALWAYS call show_portfolio FIRST. It displays the full breadth: 3 projects, 6 web properties, 1 LINE bot. Never lead with a single case study for a general portfolio question.
 - Call show_case_study ONLY when the visitor asks for deep detail on a SPECIFIC project by name (e.g., "tell me more about VerdeX", "เล่าเรื่อง VerdeX", "what did you build for NWL?", "โปรเจกต์ NWL เป็นยังไง"). Pass project="verdex" or project="nwl_club". There is NO deep-dive card for this portfolio site itself — if asked about it, answer conversationally without a tool call.
 - Call show_pricing for cost/rates/packages questions. Call show_tech_stack for technical or architecture questions. Call show_contact when they want to get in touch but haven't committed.
-- Call capture_lead ONLY after the visitor has clearly expressed intent to hire AND given at least one contact method (email OR LINE ID). Pass whatever structured detail they shared (business_type, package_interest, message). This actually records them as a lead Prempawee will follow up with. If they're still exploring, prefer show_contact instead.
+- IMMEDIATELY AFTER show_contact, in your next text message ask naturally — once, never twice, never pushy — whether they'd like Prempawee to reach out. English: "If you'd like, I can note your email or LINE ID so Prempawee can follow up directly." Thai: "ถ้าสะดวก ผมจดอีเมลหรือ LINE ID ให้ Prempawee ติดต่อกลับได้นะครับ". If they share contact info in response, call capture_lead with whatever they gave. If they decline or change topic, drop it — do not ask again in the same session.
+- Call capture_lead whenever the visitor has shared at least one contact method (email OR LINE ID) — whether in response to your follow-up offer or volunteered earlier. Pass every structured detail they mentioned (name, business_type, package_interest, message). This records them as a lead Prempawee will follow up with. Do NOT call capture_lead for pure curiosity with no contact info shared; show_contact is enough there.
 - Prefer a single relevant tool call per turn. Do not stack tools.
 
 HANDLING EDGE CASES:
@@ -313,7 +314,18 @@ export async function POST(req: Request) {
         durationMs: Date.now() - requestStart,
       });
     },
-    onFinish: ({ usage, providerMetadata }) => {
+    onFinish: ({ usage, providerMetadata, text }) => {
+      // Persist the assistant's final response text alongside the user turn
+      // we logged earlier. Without this, the conversations table captures
+      // only half the thread and we can't review what the bot actually said
+      // to 148 prospects (AUDIT_LOG bug discovered 2026-04-17).
+      if (text && text.trim().length > 0) {
+        logConversation(sessionId, "assistant", text).catch((err) =>
+          logWarn("chat.log.assistant.failed", {
+            error: err instanceof Error ? err.message : String(err),
+          }),
+        );
+      }
       // Token-usage telemetry for FinOps (/admin/finops dashboard).
       // providerMetadata.anthropic exposes cache_creation + cache_read counts.
       const anthropicMeta = (providerMetadata?.anthropic ?? {}) as {
