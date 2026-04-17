@@ -202,9 +202,29 @@ export async function insertLead(
 // /api/revalidate can invalidate it without an import cycle).
 // ---------------------------------------------------------------------------
 
+// Two-tier cache: the FULL knowledge dump (5-min TTL) used for anchor /
+// fallback context, and an LRU of semantic-retrieval results keyed by query
+// embedding hash (60s TTL). Both invalidated together by clearKnowledgeCache().
+
 let knowledgeCache: { data: string; timestamp: number } | null = null;
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
+type SemanticRow = {
+  id: number;
+  category: string;
+  title: string;
+  content: string;
+  metadata: Record<string, unknown> | null;
+  semantic_score: number;
+  fulltext_score: number;
+  combined_score: number;
+};
+
+/**
+ * Get the full knowledge-base dump formatted as markdown. Fallback path
+ * used when no query is available (e.g. first message) or embeddings are
+ * unconfigured. 5-min cache — cleared by /api/revalidate.
+ */
 export async function getKnowledgeContext(): Promise<string> {
   const now = Date.now();
   if (knowledgeCache && now - knowledgeCache.timestamp < CACHE_TTL) {
@@ -214,6 +234,54 @@ export async function getKnowledgeContext(): Promise<string> {
   const formatted = formatKnowledgeForPrompt(entries);
   knowledgeCache = { data: formatted, timestamp: now };
   return formatted;
+}
+
+/**
+ * Semantic + full-text hybrid retrieval. Uses the match_knowledge_hybrid RPC
+ * added in migration 002_semantic.sql. Returns null if the RPC fails
+ * (not applied yet, or DB error) so callers can gracefully fall back.
+ */
+export async function hybridSearchKnowledge(
+  queryEmbedding: number[],
+  queryText: string,
+  matchCount = 8,
+): Promise<SemanticRow[] | null> {
+  const { data, error } = await supabase.rpc("match_knowledge_hybrid", {
+    query_embedding: queryEmbedding,
+    query_text: queryText.slice(0, 2000),
+    match_count: matchCount,
+    semantic_weight: 0.6,
+    fulltext_weight: 0.4,
+    category_filter: null,
+  });
+  if (error) {
+    logError("supabase.hybrid-search.failed", {
+      error: { message: error.message, code: error.code },
+    });
+    return null;
+  }
+  return (data as SemanticRow[]) ?? [];
+}
+
+/**
+ * Format a retrieved subset of knowledge_base rows into prompt context.
+ * Used after hybrid retrieval. Order preserved (assumed caller ranked).
+ */
+export function formatSemanticRowsForPrompt(rows: SemanticRow[]): string {
+  if (rows.length === 0) return "";
+  const items = rows.map((r) => {
+    let text = `### ${r.title}\n${r.content}`;
+    if (r.metadata && Object.keys(r.metadata).length > 0) {
+      const meta = r.metadata as Record<string, unknown>;
+      if (meta.url) text += `\nURL: ${meta.url}`;
+      if (meta.tech) text += `\nTech: ${(meta.tech as string[]).join(", ")}`;
+      if (meta.status) text += `\nStatus: ${meta.status}`;
+      if (meta.price)
+        text += `\nPrice: ฿${(meta.price as number).toLocaleString()}`;
+    }
+    return text;
+  });
+  return `## RETRIEVED CONTEXT (top ${rows.length} by hybrid score)\n\n${items.join("\n\n")}`;
 }
 
 export function clearKnowledgeCache(): void {

@@ -12,15 +12,19 @@
     "test:watch": "vitest",
     "eval:rag": "node --env-file=.env.local scripts/eval-rag.mjs",
     "kb:refresh": "node --env-file=.env.local scripts/refresh-knowledge-base.mjs",
-    "verify:migration": "node --env-file=.env.local scripts/verify-migration.mjs"
+    "kb:embed": "node --env-file=.env.local scripts/generate-embeddings.mjs",
+    "verify:migration": "node --env-file=.env.local scripts/verify-migration.mjs",
+    "attach:domain": "node --env-file=.env.local scripts/attach-domain.mjs"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.69",
     "@ai-sdk/react": "^3.0.166",
+    "@sentry/nextjs": "^10.49.0",
     "@supabase/supabase-js": "^2.103.3",
     "@upstash/ratelimit": "^2.0.8",
     "@upstash/redis": "^1.37.0",
     "@vercel/analytics": "^2.0.1",
+    "@vercel/firewall": "^1.1.2",
     "@vercel/speed-insights": "^2.0.0",
     "ai": "^6.0.164",
     "next": "16.2.4",

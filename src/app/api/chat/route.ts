@@ -8,12 +8,21 @@ import {
 import { z } from "zod";
 import {
   getKnowledgeContext,
+  hybridSearchKnowledge,
+  formatSemanticRowsForPrompt,
   logConversation,
   logAnalytics,
   insertLead,
 } from "@/lib/supabase";
+import { embed, isEmbeddingConfigured } from "@/lib/embeddings";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 import { logError, logInfo, logWarn } from "@/lib/logger";
+import { getFlag } from "@/lib/feature-flags";
+
+// Edge runtime — lower cold-start latency, global distribution, native Web
+// APIs (fetch, crypto, streams). All our deps are edge-compatible:
+// @ai-sdk/anthropic, @supabase/supabase-js, @upstash/redis, zod, sentry.
+export const runtime = "edge";
 
 // UI message schema from the client (AI SDK v6 shape).
 // We validate each element defensively before passing to convertToModelMessages.
@@ -34,7 +43,8 @@ const uiMessageSchema = z
 
 const uiMessagesSchema = z.array(uiMessageSchema).min(1).max(100);
 
-export const maxDuration = 30;
+// maxDuration is Node-only; edge functions run under a different timeout model.
+// The 30s chat cap is enforced by Claude-side request timeouts anyway.
 
 const baseSystemPrompt = `You are Prempawee's portfolio AI. You represent a One Person Business that builds intelligent LINE OA Chatbots for Thai businesses.
 
@@ -158,6 +168,60 @@ export async function POST(req: Request) {
   }
   const uiMessages = parsed.data;
 
+  // --- Extract last user query for semantic retrieval ---------------------
+  const userMessages = uiMessages.filter((m) => m.role === "user");
+  const lastUserMsg = userMessages[userMessages.length - 1];
+  const lastUserText = (() => {
+    if (!lastUserMsg || !Array.isArray(lastUserMsg.parts)) return "";
+    const textPart = lastUserMsg.parts.find((p) => p.type === "text");
+    return textPart && typeof textPart.text === "string" ? textPart.text : "";
+  })();
+
+  // --- Hybrid semantic + full-text retrieval (best-effort) ----------------
+  // Only attempts semantic when (a) the flag is on, (b) an embedding provider
+  // is configured (OPENAI_API_KEY or VOYAGE_API_KEY), and (c) we have a
+  // user query to embed. Falls through to full-context on any miss so a
+  // quality regression is impossible.
+  let semanticBlock = "";
+  let semanticMeta: Record<string, unknown> | null = null;
+  const url = new URL(req.url);
+  if (
+    lastUserText &&
+    isEmbeddingConfigured() &&
+    getFlag("rag_semantic_retrieval" as never, url.searchParams) !== false
+  ) {
+    const embedStart = Date.now();
+    const embedding = await embed(lastUserText);
+    if (embedding) {
+      const rows = await hybridSearchKnowledge(
+        embedding.vector,
+        lastUserText,
+        6,
+      );
+      if (rows && rows.length > 0) {
+        semanticBlock = formatSemanticRowsForPrompt(rows);
+        semanticMeta = {
+          provider: embedding.provider,
+          model: embedding.model,
+          embed_tokens: embedding.tokens,
+          embed_ms: Date.now() - embedStart,
+          top_ids: rows.map((r) => r.id),
+          top_scores: rows.map((r) => Number(r.combined_score.toFixed(3))),
+        };
+      }
+    }
+  }
+
+  // --- Augment last user message with retrieval prefix --------------------
+  // Injected into the USER message (not system) so the stable system prompt
+  // keeps its 1h prompt-cache hit rate across queries with different retrievals.
+  if (semanticBlock && lastUserMsg && Array.isArray(lastUserMsg.parts)) {
+    lastUserMsg.parts.unshift({
+      type: "text",
+      text: `<relevant_context>\n${semanticBlock}\n</relevant_context>\n\nThe visitor said:\n\n`,
+    });
+  }
+
   // zod validated the shape at runtime; the AI-SDK type is nominally stricter
   // (it enumerates every valid tool-part variant). Widen via unknown is the
   // intended pattern here.
@@ -165,10 +229,13 @@ export async function POST(req: Request) {
     uiMessages as unknown as Parameters<typeof convertToModelMessages>[0],
   );
 
-  // Load knowledge base from Supabase
+  // Load knowledge base from Supabase (full dump — stable / 1h-cacheable)
   const knowledgeContext = await getKnowledgeContext();
 
-  // Build the full system prompt: base rules + knowledge from DB
+  // Build the full system prompt: base rules + FULL knowledge dump. This is
+  // the stable prefix that Anthropic prompt-caches with 1h TTL. Per-query
+  // semantic retrieval lives in the user message (see above) so it doesn't
+  // invalidate the cache.
   const systemPrompt = knowledgeContext
     ? `${baseSystemPrompt}\n\n--- KNOWLEDGE BASE (from database) ---\n\n${knowledgeContext}`
     : baseSystemPrompt;
@@ -180,14 +247,8 @@ export async function POST(req: Request) {
   const sessionId = SESSION_ID_RE.test(rawSessionId)
     ? rawSessionId
     : `server-${Date.now()}`;
-  const userMessages = uiMessages.filter((m) => m.role === "user");
-  if (userMessages.length > 0) {
-    const lastMsg = userMessages[userMessages.length - 1];
-    const parts = Array.isArray(lastMsg.parts) ? lastMsg.parts : [];
-    const textPart = parts.find((p) => p.type === "text");
-    const text =
-      textPart && typeof textPart.text === "string" ? textPart.text : "";
-    logConversation(sessionId, "user", text).catch((err) =>
+  if (lastUserText) {
+    logConversation(sessionId, "user", lastUserText).catch((err) =>
       logError("chat.log.conversation.failed", {
         error: err instanceof Error ? err : { message: String(err) },
       }),
@@ -204,6 +265,7 @@ export async function POST(req: Request) {
     sessionId,
     remaining,
     msgCount: uiMessages.length,
+    semantic: semanticMeta,
   });
 
   const result = streamText({
@@ -211,9 +273,50 @@ export async function POST(req: Request) {
     system: systemPrompt,
     messages,
     providerOptions: {
-      anthropic: { cacheControl: { type: "ephemeral" } },
+      // 1h TTL prompt caching. Extends the default 5-min ephemeral tier.
+      // Because the system prompt (base rules + full KB) is stable across
+      // queries — per-query semantic retrieval lives in the user message —
+      // this cache should hit on ~every request after warm-up. Measured
+      // via cache_read_input_tokens in the onFinish callback below.
+      anthropic: { cacheControl: { type: "ephemeral", ttl: "1h" } },
     },
     stopWhen: stepCountIs(3),
+    onFinish: ({ usage, providerMetadata }) => {
+      // Token-usage telemetry for FinOps (/admin/finops dashboard).
+      // providerMetadata.anthropic exposes cache_creation + cache_read counts.
+      const anthropicMeta = (providerMetadata?.anthropic ?? {}) as {
+        cacheCreationInputTokens?: number;
+        cacheReadInputTokens?: number;
+      };
+      const inputTokens = usage?.inputTokens ?? 0;
+      const outputTokens = usage?.outputTokens ?? 0;
+      const cacheCreation = anthropicMeta.cacheCreationInputTokens ?? 0;
+      const cacheRead = anthropicMeta.cacheReadInputTokens ?? 0;
+      logAnalytics(
+        "token_usage",
+        {
+          model: "claude-sonnet-4-20250514",
+          input_tokens: inputTokens,
+          output_tokens: outputTokens,
+          cache_creation_tokens: cacheCreation,
+          cache_read_tokens: cacheRead,
+          semantic: semanticMeta,
+          duration_ms: Date.now() - requestStart,
+        },
+        sessionId,
+      ).catch((err) =>
+        logWarn("chat.log.token_usage.failed", {
+          error: err instanceof Error ? err.message : String(err),
+        }),
+      );
+      logInfo("chat.stream.finished", {
+        sessionId,
+        input_tokens: inputTokens,
+        output_tokens: outputTokens,
+        cache_read: cacheRead,
+        cache_create: cacheCreation,
+      });
+    },
     tools: {
       show_pricing: tool({
         description:

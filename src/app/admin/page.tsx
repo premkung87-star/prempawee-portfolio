@@ -55,6 +55,7 @@ export default async function AdminIndex() {
       <nav className="space-y-2">
         <AdminLink href="/admin/leads" title="Leads" desc="Captured lead submissions, newest first" />
         <AdminLink href="/admin/conversations" title="Conversations" desc="Recent chat sessions — user + assistant messages" />
+        <AdminLink href="/admin/finops" title="FinOps" desc="Token usage + $ cost + cache hit rate (last 30 days)" />
       </nav>
     </div>
   );

@@ -1,17 +1,27 @@
-// Answer-quality eval for the RAG chat. Runs a fixed set of probe
-// questions against the live API and asserts that Claude's streamed
-// response either (a) invokes the expected tool, or (b) contains the
-// expected keyword. Exits 0 on all-pass, 1 on any fail.
+// Ragas-style answer-quality eval for the RAG chat. Two classes of check:
+//
+//   (1) Behavioral assertions — Claude must invoke the expected tool or
+//       include expected keywords. Hard pass/fail.
+//   (2) LLM-as-judge scoring — Claude Haiku scores each answer on
+//       faithfulness (grounded in retrieved context?) and answer_relevancy
+//       (does it answer the question asked?). Averaged into a quality score.
+//       Soft threshold configurable via EVAL_MIN_SCORE.
+//
+// Exits 0 on all-pass + average score >= threshold, 1 otherwise.
 //
 // Usage:
 //   npm run eval:rag                           # hits prod by default
 //   EVAL_TARGET=http://localhost:3000 npm run eval:rag
+//   EVAL_MIN_SCORE=0.7 npm run eval:rag        # default 0.7
+//   EVAL_SKIP_JUDGE=1 npm run eval:rag         # behavioral-only (no Claude judge)
 //
-// This is a spot-check, not a proper eval framework. For deeper quality
-// tracking, graduate to Anthropic's eval harness or Promptfoo later.
+// Requires ANTHROPIC_API_KEY (for the judge phase) unless EVAL_SKIP_JUDGE=1.
 
 const TARGET =
   process.env.EVAL_TARGET || "https://prempawee-portfolio.vercel.app";
+const MIN_SCORE = parseFloat(process.env.EVAL_MIN_SCORE ?? "0.7");
+const SKIP_JUDGE = process.env.EVAL_SKIP_JUDGE === "1";
+const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
 
 /**
  * @typedef {Object} Probe
@@ -112,20 +122,34 @@ async function runProbe(probe) {
 
   const text = await res.text();
 
+  // Extract the concatenated assistant text for scoring
+  const textDeltas = [];
+  for (const line of text.split("\n")) {
+    if (!line.startsWith("data: ")) continue;
+    try {
+      const json = JSON.parse(line.slice(6));
+      if (json.type === "text-delta" && typeof json.delta === "string") {
+        textDeltas.push(json.delta);
+      }
+    } catch {}
+  }
+  const answer = textDeltas.join("");
+
   if (probe.expectsTool) {
     const found = text.includes(`"toolName":"${probe.expectsTool}"`);
     if (!found) {
       return {
         ok: false,
         probe,
+        answer,
         reason: `expected tool ${probe.expectsTool} not invoked`,
       };
     }
-    return { ok: true, probe };
+    return { ok: true, probe, answer };
   }
 
   if (probe.expectsAnyKeyword) {
-    const lower = text.toLowerCase();
+    const lower = (answer || text).toLowerCase();
     const hit = probe.expectsAnyKeyword.find((k) =>
       lower.includes(k.toLowerCase()),
     );
@@ -133,13 +157,68 @@ async function runProbe(probe) {
       return {
         ok: false,
         probe,
+        answer,
         reason: `none of keywords [${probe.expectsAnyKeyword.join(", ")}] found`,
       };
     }
-    return { ok: true, probe };
+    return { ok: true, probe, answer };
   }
 
-  return { ok: false, probe, reason: "probe has no assertions configured" };
+  return { ok: false, probe, answer, reason: "probe has no assertions configured" };
+}
+
+/**
+ * LLM-as-judge scoring. Uses Claude Haiku to rate each answer on:
+ *   - faithfulness: 0-1, does the answer stay grounded in likely context?
+ *   - relevancy:    0-1, does the answer address the question asked?
+ *
+ * Returns { faithfulness, relevancy, note } or null on judge failure.
+ */
+async function judgeAnswer(question, answer) {
+  if (SKIP_JUDGE || !ANTHROPIC_KEY) return null;
+  if (!answer || answer.length < 10) {
+    return { faithfulness: 0, relevancy: 0, note: "empty-answer" };
+  }
+  const judgePrompt = `You are a RAG quality judge. A chatbot for a LINE OA developer portfolio answered a visitor question. Rate the answer on two dimensions, each from 0.0 to 1.0:
+
+- faithfulness: Does the answer contain only claims a reasonable portfolio AI could make (no invented clients, no fabricated metrics, no hallucinated tech)? 1.0 = completely grounded, 0.5 = one plausible but unverifiable claim, 0.0 = clear hallucination.
+- relevancy: Does the answer address the visitor's actual question? 1.0 = direct + complete, 0.5 = partial, 0.0 = off-topic.
+
+Output ONLY a JSON object: {"faithfulness": <0-1>, "relevancy": <0-1>, "note": "<one short sentence>"}. No markdown, no extra text.
+
+Question: ${question}
+
+Answer: ${answer.slice(0, 3000)}`;
+
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": ANTHROPIC_KEY,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 200,
+        messages: [{ role: "user", content: judgePrompt }],
+      }),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const text = data?.content?.[0]?.text ?? "";
+    const match = text.match(/\{[\s\S]*\}/);
+    if (!match) return null;
+    const parsed = JSON.parse(match[0]);
+    const clamp = (n) => Math.max(0, Math.min(1, Number(n) || 0));
+    return {
+      faithfulness: clamp(parsed.faithfulness),
+      relevancy: clamp(parsed.relevancy),
+      note: String(parsed.note ?? "").slice(0, 200),
+    };
+  } catch {
+    return null;
+  }
 }
 
 async function main() {
@@ -156,6 +235,8 @@ async function main() {
   for (const probe of PROBES) {
     try {
       const r = await runProbe(probe);
+      // LLM-as-judge scoring (soft)
+      r.judge = await judgeAnswer(probe.text, r.answer ?? "");
       results.push(r);
       console.log(
         JSON.stringify({
@@ -163,6 +244,7 @@ async function main() {
           probe: probe.name,
           ok: r.ok,
           reason: r.reason,
+          judge: r.judge,
         }),
       );
       // Soft rate between probes so we don't burn the 10/hr cap instantly
@@ -182,17 +264,35 @@ async function main() {
   const passed = results.filter((r) => r.ok).length;
   const failed = results.length - passed;
 
+  // Average judge scores across probes that got judged
+  const judged = results.filter((r) => r.judge);
+  const avgFaith = judged.length
+    ? judged.reduce((a, r) => a + r.judge.faithfulness, 0) / judged.length
+    : null;
+  const avgRelev = judged.length
+    ? judged.reduce((a, r) => a + r.judge.relevancy, 0) / judged.length
+    : null;
+  const overall = avgFaith !== null && avgRelev !== null ? (avgFaith + avgRelev) / 2 : null;
+
+  const scoreGateOk = overall === null || overall >= MIN_SCORE;
+  const allOk = failed === 0 && scoreGateOk;
+
   console.log(
     JSON.stringify({
-      level: failed === 0 ? "info" : "error",
+      level: allOk ? "info" : "error",
       message: "eval.complete",
       passed,
       failed,
       total: results.length,
+      avg_faithfulness: avgFaith,
+      avg_relevancy: avgRelev,
+      overall_score: overall,
+      threshold: MIN_SCORE,
+      gate: allOk ? "pass" : "fail",
     }),
   );
 
-  process.exit(failed === 0 ? 0 : 1);
+  process.exit(allOk ? 0 : 1);
 }
 
 await main();

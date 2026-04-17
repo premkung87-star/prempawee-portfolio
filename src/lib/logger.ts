@@ -2,6 +2,11 @@
 // console method so Vercel log drains (and `vercel logs`) pick up the level
 // correctly. All fields are JSON-serializable — pass primitive / plain-object
 // metadata only. Circular references are stripped defensively.
+//
+// ALSO: logError() forwards to Sentry when SENTRY_DSN is configured.
+// When DSN is unset, Sentry import is a no-op (see sentry.*.config.ts).
+
+import * as Sentry from "@sentry/nextjs";
 
 type Level = "info" | "warn" | "error";
 
@@ -62,4 +67,25 @@ export function logWarn(message: string, metadata?: Metadata): void {
 
 export function logError(message: string, metadata?: Metadata): void {
   emit("error", message, metadata);
+
+  // Forward to Sentry when configured. When SENTRY_DSN is unset, Sentry.init
+  // in sentry.*.config.ts is a no-op, so these calls are cheap and safe.
+  if (process.env.SENTRY_DSN || process.env.NEXT_PUBLIC_SENTRY_DSN) {
+    try {
+      const errCandidate = metadata?.error;
+      if (errCandidate instanceof Error) {
+        Sentry.captureException(errCandidate, {
+          tags: { message },
+          extra: metadata,
+        });
+      } else {
+        Sentry.captureMessage(message, {
+          level: "error",
+          extra: metadata,
+        });
+      }
+    } catch {
+      // Never let Sentry failures break the caller
+    }
+  }
 }

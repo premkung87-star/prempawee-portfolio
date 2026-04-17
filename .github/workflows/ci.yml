@@ -8,6 +8,7 @@ on:
 
 jobs:
   check:
+    name: typecheck + lint + test
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -30,3 +31,32 @@ jobs:
 
       - name: Test
         run: npm test
+
+  ragas-eval:
+    name: RAG answer quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # Only run on PRs and pushes to main. Skip in fork PRs that lack the
+    # ANTHROPIC_API_KEY secret (judge phase would no-op anyway).
+    if: github.event.pull_request.head.repo.full_name == github.repository || github.event_name == 'push'
+    needs: check
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "npm"
+
+      - name: Install
+        run: npm ci
+
+      - name: Run RAG evals against production
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          EVAL_TARGET: https://prempawee-portfolio.vercel.app
+          EVAL_MIN_SCORE: "0.7"
+          # Skip judge in CI if secret not provided (behavioral-only gate)
+          EVAL_SKIP_JUDGE: ${{ secrets.ANTHROPIC_API_KEY && '' || '1' }}
+        run: node scripts/eval-rag.mjs
