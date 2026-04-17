@@ -35,6 +35,36 @@ The deployment is fine, it just lives under Vercel's `production` slot for this 
 - ✅ **GitHub integration live with auto-deploy** — private repo at https://github.com/premkung87-star/prempawee-portfolio linked to the Vercel project, `main` is the production branch, `git push` triggers auto-deploys.
   - **One caveat:** repo is currently **public**, not private. Vercel's Hobby plan rejects commits from authors whose email isn't on the team owner's verified account list; my local git identity (`premmynotnerdyboy@...local`) doesn't match, so private deploys were blocked with empty error logs. Flipping the repo to public bypasses the collaboration check (collaboration is free for public repos per Vercel docs). Code was scanned clean before push — no secrets in any commit. To get it back to private, either (a) upgrade Vercel to Pro, or (b) set your global git identity to `premkung87@gmail.com` so future commits are attributed to your Vercel-linked GitHub account.
 
+### 🏗️ MID-MORNING BUILD-OUT — 2026-04-17 — infra review items shipped
+
+Following the B+ infrastructure review, shipped the full punch list (high + medium + low impact) in 3 commits:
+
+**🔴 High-impact — now live:**
+- **Lead capture flow** — `capture_lead` Anthropic tool in `/api/chat`, direct `/api/leads` endpoint (Zod-validated), `LeadCaptureCard` confirmation UI. Writes to the `leads` table (previously empty), fires `NOTIFICATION_WEBHOOK_URL` if set. The business-outcome gap is closed.
+- **RAG cache invalidation** — `/api/revalidate` POST endpoint with constant-time `REVALIDATE_SECRET` check. Call after `npm run kb:refresh` to skip the 5-min TTL.
+
+**🟡 Medium-impact — now live:**
+- **CSP nonce + CSRF** via `src/middleware.ts` — per-request UUID nonce, `strict-dynamic`, `'unsafe-inline'` removed from `script-src`. Origin-check on state-changing `/api/*` requests defends against casual CSRF.
+- **GitHub Actions CI** — `.github/workflows/ci.yml` runs typecheck + lint + test on every push and PR.
+- **Admin dashboard** — `/admin/login`, `/admin` overview with counts, `/admin/leads` browser, `/admin/conversations` grouped-by-session viewer. Cookie-auth via `ADMIN_SECRET`.
+- **Webhook notifications on new leads** — any Slack / Discord / n8n / Zapier-compatible URL in `NOTIFICATION_WEBHOOK_URL`.
+- **`sitemap.ts` + `robots.ts`** — file-convention SEO.
+
+**🟢 Lower-impact — now live:**
+- **Feature flags** — `src/lib/feature-flags.ts` with env-gated booleans and `?ff=key:1` query-param overrides for A/B.
+- **PWA manifest** — `src/app/manifest.ts` makes the site installable.
+- **RAG answer-quality evals** — `npm run eval:rag`, 10 canned probes (EN+TH, tool-use + keyword assertions).
+- **Test suite** — vitest, 26 tests across 5 files (rate-limit, logger, feature-flags, admin-auth, portfolio-data). All green.
+- **DB backup docs** — `migrations/README.md` updated with restore dry-run procedure; `docs/OPERATIONS.md` is the full ops runbook.
+- **Sentry scaffolding** — deliberately not installed; documented in `docs/OPERATIONS.md#observability` as a one-command follow-up when user signs up for Sentry / Axiom.
+
+**Deferred (user action required):**
+- Custom domain (user buys + DNS points)
+- Sentry / Axiom account (free tier)
+- Populate optional env vars: `ADMIN_SECRET`, `REVALIDATE_SECRET`, `NOTIFICATION_WEBHOOK_URL`, `SENTRY_DSN`, `FLAG_*`
+
+**Live URL:** https://prempawee-portfolio.vercel.app — CSP now shows `nonce-...` instead of `unsafe-inline`, sitemap / robots / manifest all 200, admin surface gated (returns login form), revalidate endpoint correctly 503s until `REVALIDATE_SECRET` is set. All verified post-push.
+
 ### ✅ ALL 4 ACTIONS CLOSED — 2026-04-17 morning
 
 - **Supabase anon → `sb_publishable_C3qi_Tv...`** — rotated via the new 2026 API Keys tab (not the JWT Secret path; new `sb_publishable_*` / `sb_secret_*` format replaces legacy anon/service_role JWTs).
