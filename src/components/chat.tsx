@@ -17,6 +17,65 @@ import {
 } from "@/lib/portfolio-data";
 
 const MAX_MESSAGES = 20;
+// Server accepts /^[a-zA-Z0-9-]{1,64}$/ — UUIDs qualify.
+const SESSION_ID_RE = /^[a-zA-Z0-9-]{1,64}$/;
+const SESSION_STORAGE_KEY = "chat-session-id";
+
+// Session-ID persistence via fetch-wrapper. Chosen deliberately over
+// useChat({ transport: ... }) because touching useChat's init options at
+// any React render-cycle boundary has proven fragile on React 19 + AI SDK
+// v6. This approach is invisible to React: we intercept the global
+// window.fetch for /api/chat POSTs only, inject x-session-id from a
+// localStorage-persisted UUID, and pass everything else through unchanged.
+// Installed in a useEffect (client-only), uninstalled on unmount.
+function installSessionIdFetchOverride(): () => void {
+  if (typeof window === "undefined") return () => {};
+  const original = window.fetch;
+  function getOrCreateSid(): string {
+    try {
+      let sid = localStorage.getItem(SESSION_STORAGE_KEY);
+      if (!sid || !SESSION_ID_RE.test(sid)) {
+        sid = crypto.randomUUID();
+        localStorage.setItem(SESSION_STORAGE_KEY, sid);
+      }
+      return sid;
+    } catch {
+      return "";
+    }
+  }
+  const patched: typeof fetch = async (input, init) => {
+    try {
+      const url =
+        typeof input === "string"
+          ? input
+          : input instanceof URL
+            ? input.href
+            : (input as Request).url;
+      const method = (
+        init?.method ||
+        (input as Request)?.method ||
+        "GET"
+      ).toUpperCase();
+      if (method === "POST" && url.includes("/api/chat")) {
+        const sid = getOrCreateSid();
+        if (sid) {
+          const headers = new Headers(
+            init?.headers || (input as Request)?.headers,
+          );
+          headers.set("x-session-id", sid);
+          init = { ...(init || {}), headers };
+        }
+      }
+    } catch {
+      // Never let the override break the underlying fetch.
+    }
+    return original(input as RequestInfo, init);
+  };
+  window.fetch = patched;
+  return () => {
+    if (window.fetch === patched) window.fetch = original;
+  };
+}
 
 // Support both AI SDK v5 `args` and v6 `input` on tool parts.
 // Returns an empty object if neither exists or they aren't plain objects.
@@ -32,6 +91,12 @@ function readToolInput<T extends Record<string, unknown>>(part: unknown): T {
 
 export function Chat() {
   const { messages, sendMessage, status, error } = useChat();
+
+  // Install the session-ID fetch interceptor on mount. See
+  // installSessionIdFetchOverride above for rationale.
+  useEffect(() => {
+    return installSessionIdFetchOverride();
+  }, []);
 
   const [input, setInput] = useState("");
   const [consented, setConsented] = useState(false);

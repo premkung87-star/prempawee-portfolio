@@ -78,6 +78,47 @@ test.describe("prempawee.com · hydration smoke", () => {
       page.locator('[role="log"]').getByText(/Prempawee|LINE OA|Claude/i).nth(1),
     ).toBeVisible({ timeout: 30_000 });
   });
+
+  test("client sends x-session-id on /api/chat POSTs (persistence guard)", async ({
+    page,
+  }) => {
+    test.slow();
+    await freshVisitor(page);
+    const consent = page.getByRole("button", { name: /I understand/i });
+    if (await consent.isVisible()) await consent.click();
+
+    let capturedSid: string | null = null;
+    page.on("request", (req) => {
+      if (
+        req.method() === "POST" &&
+        req.url().includes("/api/chat") &&
+        !capturedSid
+      ) {
+        capturedSid = req.headers()["x-session-id"] ?? null;
+      }
+    });
+
+    const input = page.getByRole("textbox", { name: /Chat input/i });
+    await input.fill("test");
+    await input.press("Enter");
+
+    // Wait until the request has been issued (response starts streaming)
+    await expect(page.getByText("test")).toBeVisible();
+    await page.waitForTimeout(1500);
+
+    expect(capturedSid).not.toBeNull();
+    // Must be a UUID-shaped alphanumeric-hyphen string (server regex).
+    expect(capturedSid).toMatch(/^[a-zA-Z0-9-]{1,64}$/);
+    // Must NOT be the server-generated srv-* fallback — that means the
+    // client failed to inject the header and the server had to make one up.
+    expect(capturedSid).not.toMatch(/^srv-/);
+
+    // And it must match what's in localStorage (persisted).
+    const stored = await page.evaluate(() =>
+      localStorage.getItem("chat-session-id"),
+    );
+    expect(stored).toBe(capturedSid);
+  });
 });
 
 test.describe("prempawee.com · security headers", () => {
