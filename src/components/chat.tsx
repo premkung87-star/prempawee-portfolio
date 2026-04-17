@@ -1,8 +1,7 @@
 "use client";
 
 import { useChat } from "@ai-sdk/react";
-import { DefaultChatTransport } from "ai";
-import { useRef, useEffect, useState, useMemo } from "react";
+import { useRef, useEffect, useState } from "react";
 import {
   PricingCard,
   PortfolioOverviewCard,
@@ -22,6 +21,53 @@ const MAX_MESSAGES = 20;
 const SESSION_ID_RE = /^[a-zA-Z0-9-]{1,64}$/;
 const SESSION_STORAGE_KEY = "chat-session-id";
 
+// Session-ID persistence WITHOUT touching useChat's transport (which broke
+// hydration in §20). Monkey-patch fetch globally on mount: any POST to
+// /api/chat gets x-session-id injected from localStorage. Reverted at
+// unmount. Safe because we only augment headers; body/method stay untouched.
+function installSessionIdFetchOverride() {
+  if (typeof window === "undefined") return () => {};
+  const original = window.fetch;
+  function getOrCreateSid(): string {
+    try {
+      let sid = localStorage.getItem(SESSION_STORAGE_KEY);
+      if (!sid || !SESSION_ID_RE.test(sid)) {
+        sid = crypto.randomUUID();
+        localStorage.setItem(SESSION_STORAGE_KEY, sid);
+      }
+      return sid;
+    } catch {
+      return "";
+    }
+  }
+  const patched: typeof fetch = async (input, init) => {
+    try {
+      const url =
+        typeof input === "string"
+          ? input
+          : input instanceof URL
+            ? input.href
+            : (input as Request).url;
+      const method = (init?.method || (input as Request)?.method || "GET").toUpperCase();
+      if (method === "POST" && url.includes("/api/chat")) {
+        const sid = getOrCreateSid();
+        if (sid) {
+          const headers = new Headers(init?.headers || (input as Request)?.headers);
+          headers.set("x-session-id", sid);
+          init = { ...(init || {}), headers };
+        }
+      }
+    } catch {
+      // never let the override break the underlying fetch
+    }
+    return original(input as RequestInfo, init);
+  };
+  window.fetch = patched;
+  return () => {
+    if (window.fetch === patched) window.fetch = original;
+  };
+}
+
 // Support both AI SDK v5 `args` and v6 `input` on tool parts.
 // Returns an empty object if neither exists or they aren't plain objects.
 function readToolInput<T extends Record<string, unknown>>(part: unknown): T {
@@ -35,35 +81,13 @@ function readToolInput<T extends Record<string, unknown>>(part: unknown): T {
 }
 
 export function Chat() {
-  // Stable per-browser chat session ID via a transport with a lazy headers
-  // FUNCTION. Creating the transport instance once (stable reference) avoids
-  // the AI SDK v6 useChat-crash-on-transport-swap that broke hydration and
-  // froze the "I understand" button. The headers fn runs at request time,
-  // reads/creates the UUID in localStorage, and handles SSR (no window).
-  const transport = useMemo(
-    () =>
-      new DefaultChatTransport({
-        api: "/api/chat",
-        headers: (): Record<string, string> => {
-          if (typeof window === "undefined") return {};
-          try {
-            let sid = localStorage.getItem(SESSION_STORAGE_KEY);
-            if (!sid || !SESSION_ID_RE.test(sid)) {
-              sid = crypto.randomUUID();
-              localStorage.setItem(SESSION_STORAGE_KEY, sid);
-            }
-            return { "x-session-id": sid };
-          } catch {
-            // localStorage disabled (private mode, etc.) — requests go out
-            // without a session header; server falls back to its own srv-*.
-            return {};
-          }
-        },
-      }),
-    [],
-  );
+  const { messages, sendMessage, status, error } = useChat();
 
-  const { messages, sendMessage, status, error } = useChat({ transport });
+  // Install the fetch override that injects x-session-id on /api/chat POSTs.
+  // Uninstalls on unmount so it never leaks between component lifecycles.
+  useEffect(() => {
+    return installSessionIdFetchOverride();
+  }, []);
 
   const [input, setInput] = useState("");
   const [consented, setConsented] = useState(false);
