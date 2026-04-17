@@ -77,6 +77,25 @@ body {
   .cursor-blink,
   .status-pulse,
   .message-enter {
-    animation: none;
+    animation: none !important;
   }
+  * {
+    transition-duration: 0ms !important;
+    animation-duration: 0ms !important;
+  }
+}
+
+/* Global focus-visible ring — keyboard users must always see what's focused
+   on a dark background. Browsers' default blue outline is often invisible
+   on #0a0a0a. */
+:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.8);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* Do not show outline on mouse focus (prevents "clicked button is ringed"
+   ugliness); focus-visible already handles keyboard-only correctly. */
+:focus:not(:focus-visible) {
+  outline: none;
 }

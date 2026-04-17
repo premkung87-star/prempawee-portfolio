@@ -36,7 +36,9 @@ describe("feature-flags", () => {
     expect(Object.keys(f).sort()).toEqual([
       "experimental_tone",
       "lead_capture_card",
+      "rag_semantic_retrieval",
       "rich_analytics",
+      "suggested_prompts",
     ]);
   });
 });

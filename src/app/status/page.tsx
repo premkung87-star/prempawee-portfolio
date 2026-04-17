@@ -6,8 +6,9 @@
 
 import { supabase } from "@/lib/supabase";
 
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
+// Cache health checks for 30s so /status doesn't DOS our backends
+// (probe load = page requests/30s instead of page requests/1s).
+export const revalidate = 30;
 
 export const metadata = {
   title: "Status — PREMPAWEE AI",
@@ -42,6 +43,17 @@ async function timed<T>(
   }
 }
 
+// Collapse raw error messages to generic strings so /status (public page)
+// doesn't leak Anthropic/Supabase internals to unauthenticated visitors.
+function genericize(err: string | undefined): string {
+  if (!err) return "unavailable";
+  if (/timeout|timed out/i.test(err)) return "timeout";
+  if (/network|fetch|econnrefused|dns/i.test(err)) return "network error";
+  const httpMatch = err.match(/\b(\d{3})\b/);
+  if (httpMatch) return `http ${httpMatch[1]}`;
+  return "unavailable";
+}
+
 async function checkSupabase(): Promise<Check> {
   const r = await timed(async () => {
     const { error } = await supabase
@@ -50,7 +62,7 @@ async function checkSupabase(): Promise<Check> {
     if (error) throw new Error(error.message);
     return true;
   });
-  if (r.error) return { name: "Supabase (RAG)", status: "down", note: r.error, latencyMs: r.latencyMs };
+  if (r.error) return { name: "Supabase (RAG)", status: "down", note: genericize(r.error), latencyMs: r.latencyMs };
   if (r.latencyMs > 2000) return { name: "Supabase (RAG)", status: "degraded", latencyMs: r.latencyMs, note: "slow" };
   return { name: "Supabase (RAG)", status: "ok", latencyMs: r.latencyMs };
 }
@@ -77,7 +89,7 @@ async function checkAnthropic(): Promise<Check> {
     if (res.status === 0) throw new Error("no response");
     return res.status;
   });
-  if (r.error) return { name: "Anthropic API", status: "down", note: r.error, latencyMs: r.latencyMs };
+  if (r.error) return { name: "Anthropic API", status: "down", note: genericize(r.error), latencyMs: r.latencyMs };
   return { name: "Anthropic API", status: "ok", latencyMs: r.latencyMs };
 }
 
@@ -99,7 +111,7 @@ async function checkUpstash(): Promise<Check> {
     if (!res.ok) throw new Error(`http ${res.status}`);
     return res.json();
   });
-  if (r.error) return { name: "Upstash Redis (rate limit)", status: "down", note: r.error, latencyMs: r.latencyMs };
+  if (r.error) return { name: "Upstash Redis (rate limit)", status: "down", note: genericize(r.error), latencyMs: r.latencyMs };
   return { name: "Upstash Redis (rate limit)", status: "ok", latencyMs: r.latencyMs };
 }
 

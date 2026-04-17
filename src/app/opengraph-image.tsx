@@ -3,6 +3,9 @@ import { ImageResponse } from "next/og";
 export const alt = "PREMPAWEE // AI — LINE OA Chatbot Developer";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
+// OG image content is stable per-deploy — cache at the edge for a year.
+// Invalidates automatically on new deploy because the filename fingerprint changes.
+export const revalidate = 31536000;
 
 export default async function OpengraphImage() {
   return new ImageResponse(

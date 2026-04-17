@@ -46,7 +46,7 @@ const uiMessagesSchema = z.array(uiMessageSchema).min(1).max(100);
 // maxDuration is Node-only; edge functions run under a different timeout model.
 // The 30s chat cap is enforced by Claude-side request timeouts anyway.
 
-const baseSystemPrompt = `You are Prempawee's portfolio AI. You represent a One Person Business that builds intelligent LINE OA Chatbots for Thai businesses.
+const baseSystemPrompt = `You are Prempawee's portfolio AI. You represent a One Person Business that builds LINE OA Chatbots for Thai businesses — bots that use Claude AI for natural Thai-language understanding rather than keyword matching.
 
 BEHAVIOR RULES:
 - Respond in whatever language the visitor uses. If they write Thai, respond in Thai. If English, respond in English.
@@ -188,7 +188,7 @@ export async function POST(req: Request) {
   if (
     lastUserText &&
     isEmbeddingConfigured() &&
-    getFlag("rag_semantic_retrieval" as never, url.searchParams) !== false
+    getFlag("rag_semantic_retrieval", url.searchParams)
   ) {
     const embedStart = Date.now();
     const embedding = await embed(lastUserText);
@@ -225,12 +225,15 @@ export async function POST(req: Request) {
   // zod validated the shape at runtime; the AI-SDK type is nominally stricter
   // (it enumerates every valid tool-part variant). Widen via unknown is the
   // intended pattern here.
-  const messages = await convertToModelMessages(
-    uiMessages as unknown as Parameters<typeof convertToModelMessages>[0],
-  );
-
-  // Load knowledge base from Supabase (full dump — stable / 1h-cacheable)
-  const knowledgeContext = await getKnowledgeContext();
+  // Kick off knowledge-base fetch in parallel with message conversion.
+  // getKnowledgeContext returns quickly from cache on warm isolates but can
+  // block ~100-500ms on cold; converting messages doesn't need to wait.
+  const [messages, knowledgeContext] = await Promise.all([
+    convertToModelMessages(
+      uiMessages as unknown as Parameters<typeof convertToModelMessages>[0],
+    ),
+    getKnowledgeContext(),
+  ]);
 
   // Build the full system prompt: base rules + FULL knowledge dump. This is
   // the stable prefix that Anthropic prompt-caches with 1h TTL. Per-query
@@ -244,9 +247,23 @@ export async function POST(req: Request) {
   // Validate session ID: max 64 chars, alphanumeric + hyphens only
   const rawSessionId = req.headers.get("x-session-id") || "";
   const SESSION_ID_RE = /^[a-zA-Z0-9-]{1,64}$/;
-  const sessionId = SESSION_ID_RE.test(rawSessionId)
-    ? rawSessionId
-    : `server-${Date.now()}`;
+  let sessionId: string;
+  if (SESSION_ID_RE.test(rawSessionId)) {
+    sessionId = rawSessionId;
+  } else {
+    if (rawSessionId) {
+      // Client sent something but it didn't match; log the shape (first 8
+      // chars) so we can diagnose client SDK quirks. Don't echo the raw
+      // value further.
+      logWarn("chat.session.invalid", {
+        prefix: rawSessionId.slice(0, 8),
+        length: rawSessionId.length,
+      });
+    }
+    // Collision-resistant UUID instead of Date.now() (concurrent requests
+    // in the same millisecond collide).
+    sessionId = `srv-${crypto.randomUUID()}`;
+  }
   if (lastUserText) {
     logConversation(sessionId, "user", lastUserText).catch((err) =>
       logError("chat.log.conversation.failed", {
@@ -281,6 +298,21 @@ export async function POST(req: Request) {
       anthropic: { cacheControl: { type: "ephemeral", ttl: "1h" } },
     },
     stopWhen: stepCountIs(3),
+    onError: ({ error }) => {
+      logError("chat.stream.error", {
+        error: error instanceof Error ? error : { message: String(error) },
+        sessionId,
+      });
+    },
+    onAbort: () => {
+      // Fired when the client disconnects mid-stream (tab close, nav away).
+      // Without this, we silently undercount abandoned sessions in FinOps
+      // and miss a key user-behavior signal.
+      logWarn("chat.stream.aborted", {
+        sessionId,
+        durationMs: Date.now() - requestStart,
+      });
+    },
     onFinish: ({ usage, providerMetadata }) => {
       // Token-usage telemetry for FinOps (/admin/finops dashboard).
       // providerMetadata.anthropic exposes cache_creation + cache_read counts.
@@ -482,6 +514,9 @@ export async function POST(req: Request) {
     headers: {
       "X-RateLimit-Remaining": String(remaining),
       "X-RateLimit-Reset": String(resetAt),
+      // Return the resolved session ID so clients whose input was rejected
+      // can persist the server-generated UUID and send it on the next turn.
+      "X-Session-Id": sessionId,
     },
   });
 

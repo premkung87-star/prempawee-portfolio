@@ -34,7 +34,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 
-  clearKnowledgeCache();
+  await clearKnowledgeCache();
   logInfo("revalidate.cache.cleared");
   return NextResponse.json({ ok: true, clearedAt: new Date().toISOString() });
 }

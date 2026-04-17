@@ -46,6 +46,27 @@ interface RateLimitEntry {
 
 const memMap = new Map<string, RateLimitEntry>();
 
+// Marks when Upstash recently failed so we switch to restricted mode briefly.
+let upstashFailingUntil = 0;
+const restrictedMemMap = new Map<string, number>(); // ip → lastAllowedAt (ms)
+
+/** Restricted-mode fallback when Upstash is known to be failing.
+ *  Allows 1 request per 30 seconds per IP. Prevents abuse without a full
+ *  deny list. */
+function restrictedInMemory(ip: string): {
+  allowed: boolean;
+  remaining: number;
+  resetAt: number;
+} {
+  const now = Date.now();
+  const last = restrictedMemMap.get(ip) ?? 0;
+  if (now - last > 30_000) {
+    restrictedMemMap.set(ip, now);
+    return { allowed: true, remaining: 0, resetAt: now + 30_000 };
+  }
+  return { allowed: false, remaining: 0, resetAt: last + 30_000 };
+}
+
 // Cleanup expired entries. Runs on every rateLimit() call, cheap even at scale.
 function cleanupExpired(now: number) {
   for (const [key, entry] of memMap) {
@@ -96,16 +117,24 @@ export async function rateLimit(ip: string): Promise<{
     };
   }
 
+  // Degraded-mode short-circuit: if Upstash recently failed, short-circuit
+  // to a restrictive in-memory limit (1 req/30s per IP) for 60s instead of
+  // the normal 10/hr. Prevents abuse while Upstash recovers.
+  if (upstashFailingUntil > Date.now()) {
+    return restrictedInMemory(ip);
+  }
+
   if (upstashLimiter) {
     try {
       const { success, remaining, reset } = await upstashLimiter.limit(ip);
       return { allowed: success, remaining, resetAt: reset };
     } catch (err) {
+      upstashFailingUntil = Date.now() + 60_000;
       logError("rate-limit.upstash.failed", {
         error: err instanceof Error ? err : { message: String(err) },
-        fallback: "in-memory",
+        fallback: "restricted_in_memory_60s",
       });
-      // Fall through to in-memory on transient Upstash error
+      return restrictedInMemory(ip);
     }
   } else {
     // Only warn once per cold start to avoid log spam

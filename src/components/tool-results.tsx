@@ -1,5 +1,3 @@
-"use client";
-
 import {
   PACKAGES,
   PROJECTS,
@@ -48,7 +46,7 @@ export function PricingCard({
             <ul className="space-y-1">
               {pkg.features.map((f, i) => (
                 <li key={i} className="text-xs text-[#888]">
-                  <span className="text-[#555] mr-1">→</span> {f}
+                  <span className="text-[#888] mr-1">→</span> {f}
                 </li>
               ))}
             </ul>
@@ -101,7 +99,7 @@ export function PortfolioOverviewCard() {
               <ul className="space-y-0.5 mb-2">
                 {p.components.map((c, i) => (
                   <li key={i} className="text-xs text-[#aaa]">
-                    <span className="text-[#666] mr-1" aria-hidden="true">
+                    <span className="text-[#888] mr-1" aria-hidden="true">
                       →
                     </span>
                     {c.url ? (
@@ -123,11 +121,11 @@ export function PortfolioOverviewCard() {
                 ))}
               </ul>
               <p className="text-[10px] text-[#888] leading-relaxed">
-                <span className="text-[#666]">Stack:</span>{" "}
+                <span className="text-[#888]">Stack:</span>{" "}
                 {p.tech.join(" · ")}
               </p>
               <p className="text-[10px] text-[#888] leading-relaxed mt-1">
-                <span className="text-[#666]">Depth:</span> {p.depth}
+                <span className="text-[#888]">Depth:</span> {p.depth}
               </p>
             </div>
           ))}
@@ -153,7 +151,7 @@ export function CaseStudyCard({
     return (
       <div className="my-3 border border-white/10 rounded overflow-hidden">
         <div className="p-4 bg-white/[0.02]">
-          <span className="text-[10px] uppercase tracking-[2px] text-[#555] block mb-2">
+          <span className="text-[10px] uppercase tracking-[2px] text-[#888] block mb-2">
             Case Study
           </span>
           <h3 className="text-white text-base mb-2">
@@ -184,17 +182,17 @@ export function CaseStudyCard({
             </a>
           </div>
           <div className="space-y-1">
-            <p className="text-[10px] uppercase tracking-[2px] text-[#555]">
+            <p className="text-[10px] uppercase tracking-[2px] text-[#888]">
               Features Built
             </p>
             {NWL_FEATURES.map((f, i) => (
               <p key={i} className="text-xs text-[#888]">
-                <span className="text-[#555] mr-1">→</span> {f}
+                <span className="text-[#888] mr-1">→</span> {f}
               </p>
             ))}
           </div>
-          <p className="text-[10px] text-[#666] mt-3">
-            <span className="text-[#555]">Stack:</span> Next.js · Supabase ·
+          <p className="text-[10px] text-[#888] mt-3">
+            <span className="text-[#888]">Stack:</span> Next.js · Supabase ·
             Tailwind CSS · Vercel
           </p>
         </div>
@@ -205,7 +203,7 @@ export function CaseStudyCard({
   return (
     <div className="my-3 border border-white/10 rounded overflow-hidden">
       <div className="p-4 bg-white/[0.02]">
-        <span className="text-[10px] uppercase tracking-[2px] text-[#555] block mb-2">
+        <span className="text-[10px] uppercase tracking-[2px] text-[#888] block mb-2">
           Case Study
         </span>
         <h3 className="text-white text-base mb-2">
@@ -221,24 +219,24 @@ export function CaseStudyCard({
           {VERDEX_METRICS.map((m) => (
             <div key={m.label} className="text-center">
               <div className="text-white text-lg">{m.value}</div>
-              <div className="text-[10px] text-[#666] uppercase tracking-[1px]">
+              <div className="text-[10px] text-[#888] uppercase tracking-[1px]">
                 {m.label}
               </div>
             </div>
           ))}
         </div>
         <div className="space-y-1">
-          <p className="text-[10px] uppercase tracking-[2px] text-[#555]">
+          <p className="text-[10px] uppercase tracking-[2px] text-[#888]">
             Features Built
           </p>
           {VERDEX_FEATURES.map((f, i) => (
             <p key={i} className="text-xs text-[#888]">
-              <span className="text-[#555] mr-1">→</span> {f}
+              <span className="text-[#888] mr-1">→</span> {f}
             </p>
           ))}
         </div>
-        <p className="text-[10px] text-[#666] mt-3">
-          <span className="text-[#555]">Stack:</span> Cloudflare Workers ·
+        <p className="text-[10px] text-[#888] mt-3">
+          <span className="text-[#888]">Stack:</span> Cloudflare Workers ·
           Supabase · Claude Opus · LINE API
         </p>
         <div className="mt-3 space-y-1 pt-3 border-t border-white/5">
@@ -267,14 +265,14 @@ export function CaseStudyCard({
 export function TechStackCard() {
   return (
     <div className="my-3 border border-white/10 rounded p-4 bg-white/[0.02]">
-      <span className="text-[10px] uppercase tracking-[2px] text-[#555] block mb-3">
+      <span className="text-[10px] uppercase tracking-[2px] text-[#888] block mb-3">
         Tech Stack
       </span>
       <div className="grid grid-cols-2 gap-3">
         {TECH_STACK.map((t) => (
           <div key={t.name}>
             <div className="text-white text-sm">{t.name}</div>
-            <div className="text-[#666] text-[11px]">{t.desc}</div>
+            <div className="text-[#888] text-[11px]">{t.desc}</div>
           </div>
         ))}
       </div>
@@ -326,19 +324,19 @@ export function LeadCaptureCard({
       <div className="space-y-1 text-xs text-[#aaa]">
         {email ? (
           <div>
-            <span className="text-[#666]">Email:</span>{" "}
+            <span className="text-[#888]">Email:</span>{" "}
             <span className="text-[#ccc]">{email}</span>
           </div>
         ) : null}
         {line_id ? (
           <div>
-            <span className="text-[#666]">LINE:</span>{" "}
+            <span className="text-[#888]">LINE:</span>{" "}
             <span className="text-[#ccc]">{line_id}</span>
           </div>
         ) : null}
         {package_interest ? (
           <div>
-            <span className="text-[#666]">Interested in:</span>{" "}
+            <span className="text-[#888]">Interested in:</span>{" "}
             <span className="text-[#ccc] uppercase">{package_interest}</span>
           </div>
         ) : null}
@@ -359,16 +357,16 @@ export function LeadCaptureCard({
 export function ContactCard() {
   return (
     <div className="my-3 border border-white/10 rounded p-4 bg-white/[0.02]">
-      <span className="text-[10px] uppercase tracking-[2px] text-[#555] block mb-3">
+      <span className="text-[10px] uppercase tracking-[2px] text-[#888] block mb-3">
         Get In Touch
       </span>
       <div className="space-y-3">
         <div>
-          <div className="text-[#666] text-[11px] mb-1">LINE</div>
+          <div className="text-[#888] text-[11px] mb-1">LINE</div>
           <div className="text-white text-sm">{CONTACT.line}</div>
         </div>
         <div>
-          <div className="text-[#666] text-[11px] mb-1">Email</div>
+          <div className="text-[#888] text-[11px] mb-1">Email</div>
           <a
             href={`mailto:${CONTACT.email}`}
             className="text-white text-sm underline underline-offset-2 decoration-white/30 hover:decoration-white/60 transition-colors"
@@ -377,7 +375,7 @@ export function ContactCard() {
           </a>
         </div>
         <div>
-          <div className="text-[#666] text-[11px] mb-1">LinkedIn</div>
+          <div className="text-[#888] text-[11px] mb-1">LinkedIn</div>
           <a
             href={CONTACT.linkedin}
             target="_blank"
@@ -388,7 +386,7 @@ export function ContactCard() {
           </a>
         </div>
         <div>
-          <div className="text-[#666] text-[11px] mb-1">Fastwork</div>
+          <div className="text-[#888] text-[11px] mb-1">Fastwork</div>
           <a
             href={CONTACT.fastwork}
             target="_blank"

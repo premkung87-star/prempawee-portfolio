@@ -21,7 +21,7 @@ export default function FallbackPage() {
     <div className="flex flex-col min-h-dvh bg-[#0a0a0a] bg-grid">
       <header className="flex items-center justify-between px-4 py-3 border-b border-white/10 shrink-0">
         <div className="text-sm tracking-[3px] uppercase text-white">
-          PREMPAWEE <span className="text-[#666]">{"// AI"}</span>
+          PREMPAWEE <span className="text-[#888]">{"// AI"}</span>
         </div>
         <div className="flex items-center gap-1.5 text-[11px] text-[#888]">
           <span className="w-1.5 h-1.5 rounded-full bg-[#888]" />
@@ -92,7 +92,7 @@ export default function FallbackPage() {
                     <ul className="space-y-0.5 mb-2">
                       {p.components.map((c, i) => (
                         <li key={i} className="text-xs text-[#aaa]">
-                          <span className="text-[#666] mr-1" aria-hidden="true">
+                          <span className="text-[#888] mr-1" aria-hidden="true">
                             →
                           </span>
                           {c.url ? (
@@ -114,11 +114,11 @@ export default function FallbackPage() {
                       ))}
                     </ul>
                     <p className="text-[10px] text-[#888] leading-relaxed">
-                      <span className="text-[#666]">Stack:</span>{" "}
+                      <span className="text-[#888]">Stack:</span>{" "}
                       {p.tech.join(" · ")}
                     </p>
                     <p className="text-[10px] text-[#888] leading-relaxed mt-1">
-                      <span className="text-[#666]">Depth:</span> {p.depth}
+                      <span className="text-[#888]">Depth:</span> {p.depth}
                     </p>
                   </div>
                 ))}
@@ -161,7 +161,7 @@ export default function FallbackPage() {
                 <ul className="space-y-1">
                   {pkg.features.map((f, i) => (
                     <li key={i} className="text-xs text-[#888]">
-                      <span className="text-[#666] mr-1">&rarr;</span> {f}
+                      <span className="text-[#888] mr-1">&rarr;</span> {f}
                     </li>
                   ))}
                 </ul>
@@ -202,12 +202,12 @@ export default function FallbackPage() {
                 </p>
                 {VERDEX_FEATURES.map((f, i) => (
                   <p key={i} className="text-xs text-[#888]">
-                    <span className="text-[#666] mr-1">&rarr;</span> {f}
+                    <span className="text-[#888] mr-1">&rarr;</span> {f}
                   </p>
                 ))}
               </div>
               <p className="text-[10px] text-[#888] mt-3">
-                <span className="text-[#666]">Stack:</span> Cloudflare Workers
+                <span className="text-[#888]">Stack:</span> Cloudflare Workers
                 &middot; Supabase &middot; Claude Opus &middot; LINE API
               </p>
             </div>
@@ -254,12 +254,12 @@ export default function FallbackPage() {
                 </p>
                 {NWL_FEATURES.map((f, i) => (
                   <p key={i} className="text-xs text-[#888]">
-                    <span className="text-[#666] mr-1">&rarr;</span> {f}
+                    <span className="text-[#888] mr-1">&rarr;</span> {f}
                   </p>
                 ))}
               </div>
               <p className="text-[10px] text-[#888] mt-3">
-                <span className="text-[#666]">Stack:</span> Next.js &middot;
+                <span className="text-[#888]">Stack:</span> Next.js &middot;
                 Supabase &middot; Tailwind CSS &middot; Vercel
               </p>
             </div>

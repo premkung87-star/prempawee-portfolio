@@ -8,12 +8,16 @@
 export type FlagKey =
   | "lead_capture_card"
   | "rich_analytics"
-  | "experimental_tone";
+  | "experimental_tone"
+  | "rag_semantic_retrieval"
+  | "suggested_prompts";
 
 const DEFAULTS: Record<FlagKey, boolean> = {
   lead_capture_card: true,
   rich_analytics: false,
   experimental_tone: false,
+  rag_semantic_retrieval: true,
+  suggested_prompts: true,
 };
 
 function isTruthy(v: string | undefined): boolean {

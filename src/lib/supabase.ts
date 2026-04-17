@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
-import { logError } from "./logger";
+import { Redis } from "@upstash/redis";
+import { logError, logWarn } from "./logger";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -99,9 +100,11 @@ export async function searchKnowledge(
 }
 
 /**
- * Log a conversation message. Returns the insert result so callers can react
- * to failures if needed. Content is truncated to 5000 chars to mirror the
- * database CHECK constraint from migration 001_hardening.sql.
+ * Log a conversation message via service-role so it bypasses any drift in the
+ * public RLS policies (migration 001 tightened them). If anon-key writes ever
+ * start failing silently, we lose our entire chat history. Admin client
+ * guarantees we land the row or surface an error.
+ * Content is truncated to 5000 chars to mirror the database CHECK constraint.
  */
 export async function logConversation(
   sessionId: string,
@@ -112,7 +115,8 @@ export async function logConversation(
   if (trimmed.length === 0) {
     return { ok: false, error: "empty_content" };
   }
-  const { error } = await supabase.from("conversations").insert({
+  const client = supabaseAdmin ?? supabase;
+  const { error } = await client.from("conversations").insert({
     session_id: sessionId,
     role,
     content: trimmed,
@@ -123,6 +127,7 @@ export async function logConversation(
       error: { message: error.message, code: error.code },
       sessionId,
       role,
+      via: supabaseAdmin ? "service_role" : "anon",
     });
     return { ok: false, error: error.message };
   }
@@ -130,15 +135,17 @@ export async function logConversation(
 }
 
 /**
- * Log an analytics event. Non-blocking semantics; failures logged structurally
- * but not thrown.
+ * Log an analytics event via service-role (same rationale as
+ * logConversation — protect against RLS drift silently dropping all ops
+ * telemetry).
  */
 export async function logAnalytics(
   eventType: string,
   eventData: Record<string, unknown> = {},
   sessionId?: string,
 ): Promise<{ ok: boolean; error?: string }> {
-  const { error } = await supabase.from("analytics").insert({
+  const client = supabaseAdmin ?? supabase;
+  const { error } = await client.from("analytics").insert({
     event_type: eventType,
     event_data: eventData,
     session_id: sessionId,
@@ -149,6 +156,7 @@ export async function logAnalytics(
       error: { message: error.message, code: error.code },
       eventType,
       sessionId,
+      via: supabaseAdmin ? "service_role" : "anon",
     });
     return { ok: false, error: error.message };
   }
@@ -198,16 +206,30 @@ export async function insertLead(
 }
 
 // ---------------------------------------------------------------------------
-// RAG knowledge-base cache (moved from src/app/api/chat/route.ts so that
-// /api/revalidate can invalidate it without an import cycle).
+// RAG knowledge-base cache — two-tier: L1 in-memory per-isolate (30s fast
+// path), L2 Upstash Redis (global, 5min, cross-isolate). /api/revalidate
+// clears L2 → next miss on L1 re-reads L2 → miss → re-fetches from Supabase.
+// Fixes the edge/Node cache split where the old module-scoped `let` was
+// only invalidated in one runtime.
 // ---------------------------------------------------------------------------
 
-// Two-tier cache: the FULL knowledge dump (5-min TTL) used for anchor /
-// fallback context, and an LRU of semantic-retrieval results keyed by query
-// embedding hash (60s TTL). Both invalidated together by clearKnowledgeCache().
+const cacheRedis = (() => {
+  const url = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
+  const token =
+    process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+  if (!url || !token) return null;
+  try {
+    return Redis.fromEnv();
+  } catch {
+    return null;
+  }
+})();
 
-let knowledgeCache: { data: string; timestamp: number } | null = null;
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const KB_CACHE_KEY = "rag:kb:v1";
+const L2_TTL_SECONDS = 5 * 60; // 5 min Upstash TTL (global)
+const L1_TTL_MS = 30 * 1000; // 30s per-isolate fast path
+
+let l1Cache: { data: string; timestamp: number } | null = null;
 
 type SemanticRow = {
   id: number;
@@ -221,18 +243,44 @@ type SemanticRow = {
 };
 
 /**
- * Get the full knowledge-base dump formatted as markdown. Fallback path
- * used when no query is available (e.g. first message) or embeddings are
- * unconfigured. 5-min cache — cleared by /api/revalidate.
+ * Get the full knowledge-base dump formatted as markdown.
+ *   L1 (30s per-isolate) → L2 (Upstash, 5min global) → Supabase.
+ * Invalidated globally by /api/revalidate (drops L2; L1 expires naturally).
  */
 export async function getKnowledgeContext(): Promise<string> {
   const now = Date.now();
-  if (knowledgeCache && now - knowledgeCache.timestamp < CACHE_TTL) {
-    return knowledgeCache.data;
+  // L1 — per-isolate fast path
+  if (l1Cache && now - l1Cache.timestamp < L1_TTL_MS) {
+    return l1Cache.data;
   }
+  // L2 — global (Upstash)
+  if (cacheRedis) {
+    try {
+      const cached = await cacheRedis.get<string>(KB_CACHE_KEY);
+      if (typeof cached === "string" && cached.length > 0) {
+        l1Cache = { data: cached, timestamp: now };
+        return cached;
+      }
+    } catch (err) {
+      logWarn("kb.cache.get.failed", {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
+  // Miss on both tiers → fetch fresh from Supabase
   const entries = await getAllKnowledge();
   const formatted = formatKnowledgeForPrompt(entries);
-  knowledgeCache = { data: formatted, timestamp: now };
+  // Populate both tiers (best-effort on L2)
+  l1Cache = { data: formatted, timestamp: now };
+  if (cacheRedis) {
+    cacheRedis
+      .set(KB_CACHE_KEY, formatted, { ex: L2_TTL_SECONDS })
+      .catch((err) =>
+        logWarn("kb.cache.set.failed", {
+          error: err instanceof Error ? err.message : String(err),
+        }),
+      );
+  }
   return formatted;
 }
 
@@ -284,8 +332,23 @@ export function formatSemanticRowsForPrompt(rows: SemanticRow[]): string {
   return `## RETRIEVED CONTEXT (top ${rows.length} by hybrid score)\n\n${items.join("\n\n")}`;
 }
 
-export function clearKnowledgeCache(): void {
-  knowledgeCache = null;
+/**
+ * Invalidate both L1 and L2. L1 is per-isolate so this only clears the
+ * isolate we're currently in — but that's fine because L1 TTL is 30s anyway
+ * and L2 (Upstash) is global, so every other isolate picks up the fresh
+ * content on its next cache miss.
+ */
+export async function clearKnowledgeCache(): Promise<void> {
+  l1Cache = null;
+  if (cacheRedis) {
+    try {
+      await cacheRedis.del(KB_CACHE_KEY);
+    } catch (err) {
+      logWarn("kb.cache.del.failed", {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
 }
 
 /**

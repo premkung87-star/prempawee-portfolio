@@ -1,5 +1,10 @@
--- Seed data for Prempawee's portfolio knowledge base
--- Embeddings will be generated programmatically after insert
+-- Seed data for Prempawee's portfolio knowledge base.
+-- Source of truth for LIVE content: scripts/refresh-knowledge-base.mjs.
+-- Regenerate after running refresh: npm run kb:refresh + kb:embed.
+-- This seed file reflects minimum content for a fresh DB bootstrap —
+-- ops may then run refresh-knowledge-base to sync to the current
+-- copy in docs/SSS_STATUS.md or via the admin workflow.
+-- Embeddings are populated via scripts/generate-embeddings.mjs.
 
 -- BIO
 insert into knowledge_base (category, title, content, metadata) values
@@ -9,7 +14,7 @@ insert into knowledge_base (category, title, content, metadata) values
 
 -- VERDEX FARM PROJECT
 insert into knowledge_base (category, title, content, metadata) values
-('project', 'VerdeX Farm - Overview', 'VerdeX Farm is Prempawee''s flagship project. It is a complete AI-powered smart greenhouse management system for growing sweet basil using DWC (Deep Water Culture) Hydroponics in Chiang Mai, Thailand. The project consists of 4 major components: a landing page website, a blog platform, an owner command center (admin dashboard), and a LINE OA Bot. The system has been iterated 12 times (Round 12), showing continuous improvement and refinement. The software is fully functional. Hardware sensors are pending assembly.', '{"status": "Software functional, hardware pending", "type": "AI Smart Greenhouse", "crop": "Sweet Basil (DWC Hydroponics)", "location": "Chiang Mai", "iterations": 12}'),
+('project', 'VerdeX Farm - Overview', 'VerdeX Farm is Prempawee''s largest project — a complete AI-powered smart greenhouse management system for growing sweet basil using DWC (Deep Water Culture) Hydroponics in Chiang Mai, Thailand. The project consists of 4 major components: a landing page website, a blog platform, an owner command center (admin dashboard), and a LINE OA Bot. The system has been iterated 12 times (Round 12), showing continuous improvement and refinement. The software is fully functional. Hardware sensors are pending assembly.', '{"status": "Software functional, hardware pending", "type": "AI Smart Greenhouse", "crop": "Sweet Basil (DWC Hydroponics)", "location": "Chiang Mai", "iterations": 12}'),
 
 ('project', 'VerdeX Farm - Landing Page', 'VerdeX Farm has a public landing page website that introduces the smart farm concept and brand. Built on Cloudflare Workers for fast edge delivery.', '{"url": "https://verdex-web.verdexfarm.workers.dev/", "tech": ["Cloudflare Workers"], "component": "Landing Page"}'),
 
@@ -45,7 +50,7 @@ insert into knowledge_base (category, title, content, metadata) values
 insert into knowledge_base (category, title, content, metadata) values
 ('faq', 'What makes Prempawee different from other chatbot developers?', 'Prempawee''s chatbots use Claude AI which understands natural Thai language, not just keyword matching like most chatbot services (ZWIZ.AI, Botnoi, etc.). The systems are built on production-grade infrastructure (Vercel with 99.99% uptime, Supabase database) that can scale with the business. Prempawee also has a Mass Communication background which means understanding both the technology AND the marketing/communication side of chatbot design. The VerdeX Farm project demonstrates the depth of capability with 12 iterations, showing commitment to quality and continuous improvement.', '{}'),
 
-('faq', 'How many projects has Prempawee completed?', 'Prempawee has built 3 major projects consisting of 7 web properties and 1 LINE bot: VerdeX Farm (landing page + blog + command center app + LINE bot), NWL CLUB (work tracker + community website), and this AI-powered portfolio website. Each project demonstrates different capabilities, from AI chatbot systems to employee management to community platforms.', '{}'),
+('faq', 'How many projects has Prempawee completed?', 'Prempawee has built 3 major projects consisting of 6 web properties and 1 LINE bot: VerdeX Farm (landing page + blog + command center app + LINE bot), NWL CLUB (work tracker + community website), and this AI-powered portfolio website. Each project demonstrates different capabilities, from AI chatbot systems to employee management to community platforms.', '{}'),
 
 ('faq', 'What is the work process?', 'Prempawee follows a 4-step professional work process: Step 1 is consultation to understand the client needs via a requirement form covering business info, target customers, frequently asked questions, and desired conversation flow. Step 2 is system design, presenting conversation flow diagrams and Rich Menu wireframes for approval before development begins. Step 3 is development and testing on a staging environment where the client can interact with the chatbot before production deployment. Step 4 is deployment and handoff with documentation and video tutorial. The client needs to provide: admin access to LINE OA and LINE Developers Console, product/service list with prices and images, at least 20 FAQ items, tone of voice guidelines, and clear feedback at each phase.', '{}'),
 

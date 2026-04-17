@@ -83,71 +83,26 @@ async function embedOpenAI(text: string): Promise<EmbeddingResult | null> {
   }
 }
 
-async function embedVoyage(text: string): Promise<EmbeddingResult | null> {
-  const key = process.env.VOYAGE_API_KEY;
-  if (!key) return null;
-  try {
-    const res = await fetch("https://api.voyageai.com/v1/embeddings", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${key}`,
-      },
-      body: JSON.stringify({
-        input: text,
-        model: "voyage-3",
-        // voyage-3 is 1024-dim by default; we pad to 1536 below
-      }),
-      signal: AbortSignal.timeout(5000),
-    });
-    if (!res.ok) {
-      logError("embeddings.voyage.http-error", { status: res.status });
-      return null;
-    }
-    const json = (await res.json()) as {
-      data: Array<{ embedding: number[] }>;
-      usage?: { total_tokens: number };
-    };
-    const raw = json.data?.[0]?.embedding;
-    if (!Array.isArray(raw)) return null;
-    // Pad to 1536 with zeros so it fits our vector(1536) column.
-    // Keep the model provenance in the provider field so we can migrate later.
-    const padded = raw.length >= 1536 ? raw.slice(0, 1536) : [...raw, ...new Array(1536 - raw.length).fill(0)];
-    return {
-      vector: padded,
-      provider: "voyage",
-      model: "voyage-3",
-      tokens: json.usage?.total_tokens ?? 0,
-    };
-  } catch (err) {
-    logError("embeddings.voyage.exception", {
-      error: err instanceof Error ? err.message : String(err),
-    });
-    return null;
-  }
-}
+// Voyage fallback intentionally removed — mixing embedding providers across
+// the same corpus silently corrupts cosine similarity (zero-padding drags
+// scores toward 0 vs native OpenAI vectors). If future need arises, add a
+// separate `embedding_voyage` vector column to knowledge_base, gate
+// retrieval by provider, and only blend-match within a single provider.
+// Until then: OpenAI is the only provider; without it, retrieval falls
+// back to full-context (see getKnowledgeContext).
 
 /**
- * Embed a single piece of text. Returns null if no provider is configured,
- * or all providers fail — callers should fall back to non-semantic retrieval.
+ * Embed a single piece of text via OpenAI. Returns null when:
+ *   - no API key configured (chat falls back to full-context retrieval)
+ *   - OpenAI quota exceeded (backoff active, see embedOpenAI)
+ *   - network / schema error (logged, fall through)
  */
 export async function embed(text: string): Promise<EmbeddingResult | null> {
   const clean = text.trim().slice(0, 8000);
   if (!clean) return null;
-  // OpenAI first (preferred: matches column dim natively, cheapest).
-  const openai = await embedOpenAI(clean);
-  if (openai) return openai;
-  // Voyage fallback.
-  const voyage = await embedVoyage(clean);
-  if (voyage) return voyage;
-  // Nothing configured — expected path in many deployments
-  if (!process.env.OPENAI_API_KEY && !process.env.VOYAGE_API_KEY) {
-    return null; // silent: RAG falls back to full-context retrieval
-  }
-  logWarn("embeddings.all-providers-failed");
-  return null;
+  return embedOpenAI(clean);
 }
 
 export function isEmbeddingConfigured(): boolean {
-  return !!(process.env.OPENAI_API_KEY || process.env.VOYAGE_API_KEY);
+  return Boolean(process.env.OPENAI_API_KEY);
 }

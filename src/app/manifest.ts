@@ -1,5 +1,8 @@
 import type { MetadataRoute } from "next";
 
+// Cache the manifest for a year — it's stable per-deploy.
+export const revalidate = 31536000;
+
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "PREMPAWEE // AI — LINE OA Chatbot Developer",
