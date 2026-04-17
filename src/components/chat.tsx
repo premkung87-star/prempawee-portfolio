@@ -418,7 +418,7 @@ export function Chat() {
               if (part.type === "tool-show_tech_stack")
                 return <TechStackCard key={partKey} />;
               if (part.type === "tool-show_contact")
-                return <ContactCard key={partKey} />;
+                return <ContactCard key={partKey} lang={lang} />;
               if (part.type === "tool-capture_lead") {
                 // Read the `output` (tool result), not the input. Support
                 // both `output` (v6 canonical) and `result` (v5 alias).
