@@ -4,6 +4,49 @@ Last audit: 2026-04-18
 
 ---
 
+## 🔍 SENTRY CLIENT SDK INVISIBLE UNDER TURBOPACK — root cause found, fix queued — 2026-04-18
+
+DSN activated across all 3 Vercel envs earlier today, but `window.Sentry` stayed undefined in production. Root cause is bundler-level, not config-level: `sentry.client.config.ts` is orphaned under Turbopack (the default bundler on Next.js 16.2.4). Fix is a single-file rename, but risk classification is HIGH (§20 neighborhood per KARPATHY.md Part 2 §6), so execution is deferred to a fresh session tomorrow.
+
+**Diagnostic evidence (live browser against production):**
+- `window.Sentry` is `undefined`
+- Zero scripts matching `/sentry|client-config/` in `document.scripts`
+- Zero requests to `*.ingest.sentry.io` in Network tab
+- `NEXT_PUBLIC_SENTRY_DSN` not reachable via `__NEXT_DATA__`
+
+**Root cause (the smoking gun from node_modules):**
+`@sentry/nextjs@10.49.0` under Turbopack only scans for client init at `src/instrumentation-client.(ts|js)` or `instrumentation-client.(ts|js)` at repo root — per `node_modules/@sentry/nextjs/build/esm/config/withSentryConfig/buildTime.js:99-104` and `.../config/turbopack/generateValueInjectionRules.js:52`. `sentry.client.config.ts` is the legacy webpack convention, deprecated since Next.js 15.3 (which introduced `instrumentation-client` as a native file convention). The webpack path prints a `DEPRECATION WARNING` at `.../config/webpack.js:325-329`; the Turbopack path does not — so the breakage is **invisible by design of the SDK's detection code itself**.
+
+**KARPATHY.md Part 2 §5 + §6 + §10 trifecta:**
+- **§5 (Verify Framework Version Before Using APIs):** file-pattern convention drifted under us. `sentry.client.config.ts` was scaffolded when the old pattern still worked under webpack; the Next.js 16 + Turbopack default silently broke the client path.
+- **§6 (Browser Verification Is The Only Valid Success Signal):** only caught today when we finally ran a live-browser check post-DSN-activation. TypeScript compiled, build succeeded, server + edge Sentry worked — every indirect signal was green.
+- **§10 (Observability Before Features):** the observability tool we were standing up was invisible to itself. "I enabled Sentry" and "Sentry is actually capturing errors" diverged silently for several hours. Classic observability paradox.
+
+**Proposed fix (DO NOT execute in this commit):**
+```bash
+git mv sentry.client.config.ts src/instrumentation-client.ts
+```
+No body changes needed — the file is already module-level `Sentry.init()` guarded by `process.env.NEXT_PUBLIC_SENTRY_DSN`, which is exactly the shape the new convention expects. **Risk classification: HIGH** — runs in the client bundle before React hydration, squarely in the §20 neighborhood.
+
+**Verification plan for next session:**
+```bash
+npm run typecheck && npm run test && npm run build
+BASE_URL=http://localhost:3000 npm run test:e2e
+git push  # feature branch, NOT direct to main
+# After Vercel preview deploys:
+BASE_URL=<preview-url> npm run test:e2e
+```
+Manual browser checks:
+- `typeof window.Sentry === "object"` returns `true`
+- One POST to `*.ingest.sentry.io/api/...` appears in Network tab on first thrown error
+
+**Next session entry point:**
+- Start with the Session-Opening Handshake per `CLAUDE.md`
+- Create branch: `fix/sentry-turbopack-client-config`
+- Execute the rename as the **only** change on that branch (KARPATHY.md Part 2 §7 — never bundle unrelated hardening)
+- All verification steps above must pass before merge
+- Log the outcome as §24 (or extend §23 with a "Fix verified" sub-section)
+
 ## 📚 SOP LAYERED DEPLOYMENT — 2026-04-18 · Karpathy + Prempawee extensions
 
 Shipped a two-part SOP stack to harden Claude Code sessions against the failure modes catalogued in §17-§21. Entry point `CLAUDE.md` imports a layered guidance set and codifies the session-opening ritual. Docs-only change, no watchlist files touched — classified LOW risk.
