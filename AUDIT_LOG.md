@@ -27,6 +27,20 @@ During this session we hit `/clear` at ~600k tokens without first running the Se
 **Next:**
 Begin Week 1 operational activation plan — Sentry DSN + 3 alert rules, GitHub branch protection on `main` (require PR + status checks + reviewer), HSTS preload submission, then remaining items from `docs/SSS_STATUS.md`. Each item ships as its own commit per KARPATHY.md Part 2 §7.
 
+### 🔍 First Sentry capture — triage complete
+
+First issue surfaced after DSN activation was a 1-day-old Watchpack warning — "Both middleware file './src/middleware.ts' and proxy file './src/proxy.ts' are detected." Triaged immediately given §18 + §20 history.
+
+**Issue:** dev-server coexistence warning for `middleware.ts` / `proxy.ts`.
+
+**Root cause:** transient during the April 17 rename ping-pong (`899ae89` rename → `164ef58` revert → `0c097bc` re-rename, all inside ~3 hours). Watchpack saw both paths in its in-memory file index before the deletion propagated.
+
+**Verification:** `ls src/middleware.ts` → no-such-file; `git ls-files` tracks only `src/proxy.ts`; grep for `src/middleware` finds zero code references (all remaining hits are documentation/comments/history); stash + reflog clean.
+
+**Action:** Resolved in Sentry UI — no code change needed.
+
+**Follow-up:** Open ticket for a 3-line CI guard that fails if both files exist simultaneously — converts the silent dev-server warning into a merge-blocking signal. Maps to KARPATHY.md Part 2 §10 (Observability Before Features).
+
 ## 💎 A+ RESTORED PROPERLY — 2026-04-17 night · full 4-phase workflow complete
 
 Ran the user's requested Audit → Fix → Reinforce → Upgrade workflow end-to-end with three parallel subagents (code-reviewer, external-research, vercel-deployment-expert) and landed a clean A+.
