@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PREMPAWEE — A Practice in Conversational Software</title>
+    <meta
+      name="description"
+      content="Chatbot architect for Thai businesses. Claude-AI-powered LINE OA systems, not keyword matching."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT@0,9..144,200..900,0..100;1,9..144,200..900,0..100&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@300;400;500&family=Noto+Serif+Thai:wght@400;500;700&family=Bai+Jamjuree:wght@300;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --paper: #f2ece0;
+        --paper-warm: #ede5d4;
+        --paper-dim: #dbd0b8;
+        --ink: #1a1511;
+        --ink-soft: #3a2e22;
+        --ink-mute: #7a6f5e;
+        --brass: #b08a3d;
+        --brass-deep: #8a6b2a;
+        --silk: #8b4132;
+        --rule: #c9bfa6;
+        --rule-fine: #ddd2b5;
+
+        --display: "Fraunces", "Noto Serif Thai", Georgia, serif;
+        --display-th: "Noto Serif Thai", "Bai Jamjuree", serif;
+        --body: "Instrument Serif", "Noto Serif Thai", Georgia, serif;
+        --mono: "JetBrains Mono", ui-monospace, monospace;
+
+        --grid-gap: clamp(16px, 2vw, 32px);
+        --side-pad: clamp(24px, 5vw, 80px);
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        background: var(--paper);
+        color: var(--ink);
+        font-family: var(--body);
+        font-feature-settings: "kern", "liga", "ss01";
+        -webkit-font-smoothing: antialiased;
+        overflow-x: hidden;
+      }
+
+      body {
+        min-height: 100vh;
+        position: relative;
+      }
+
+      /* ─── grain texture overlay — SVG noise, 3% opacity ───
+         Subtle enough to feel like paper, not enough to distract */
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        opacity: 0.04;
+        mix-blend-mode: multiply;
+        background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/></filter><rect width='200' height='200' filter='url(%23n)' opacity='1'/></svg>");
+        z-index: 100;
+      }
+
+      /* ─── gigantic background Thai character watermark ─── */
+      .watermark {
+        position: fixed;
+        top: 18vh;
+        right: -6vw;
+        font-family: var(--display-th);
+        font-weight: 700;
+        font-size: clamp(320px, 62vw, 900px);
+        line-height: 0.85;
+        color: var(--ink);
+        opacity: 0.035;
+        user-select: none;
+        pointer-events: none;
+        z-index: 0;
+        letter-spacing: -0.04em;
+      }
+
+      /* ─── page-wide container + grid ─── */
+      .container {
+        position: relative;
+        z-index: 1;
+        max-width: 1440px;
+        margin: 0 auto;
+        padding: 32px var(--side-pad) 48px;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+
+      /* ─── topbar: wordmark left, colophon right ─── */
+      .topbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        padding-bottom: 16px;
+        border-bottom: 1px solid var(--rule);
+        animation: fade-in 700ms ease 40ms both;
+      }
+
+      .mark {
+        font-family: var(--display);
+        font-variation-settings: "opsz" 144, "SOFT" 30;
+        font-weight: 500;
+        font-size: 20px;
+        letter-spacing: 0.28em;
+        text-transform: uppercase;
+        color: var(--ink);
+      }
+
+      .mark .dot {
+        color: var(--silk);
+        font-family: var(--mono);
+        font-weight: 400;
+        font-size: 16px;
+        letter-spacing: 0;
+        margin: 0 4px;
+      }
+
+      .colophon {
+        font-family: var(--mono);
+        font-size: 10px;
+        font-weight: 400;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        color: var(--ink-mute);
+        display: flex;
+        flex-wrap: wrap;
+        gap: 22px;
+        justify-content: flex-end;
+        text-align: right;
+      }
+
+      .colophon span {
+        display: inline-flex;
+        align-items: center;
+      }
+
+      .colophon .sep {
+        color: var(--rule);
+      }
+
+      /* ─── hero: center content with asymmetric weighting ─── */
+      .hero {
+        flex: 1;
+        display: grid;
+        grid-template-columns: repeat(12, 1fr);
+        gap: var(--grid-gap);
+        padding: clamp(48px, 9vh, 120px) 0 clamp(32px, 6vh, 80px);
+        align-content: center;
+      }
+
+      /* prelude — thin intro line above the headline */
+      .prelude {
+        grid-column: 1 / 10;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: clamp(24px, 4vh, 48px);
+        animation: fade-in 700ms ease 120ms both;
+      }
+
+      .prelude-rule {
+        height: 1px;
+        background: var(--brass);
+        width: 48px;
+        flex-shrink: 0;
+        transform-origin: left;
+        animation: rule-draw 800ms cubic-bezier(0.65, 0, 0.35, 1) 180ms both;
+      }
+
+      .prelude-text {
+        font-family: var(--mono);
+        font-size: 11px;
+        letter-spacing: 0.24em;
+        text-transform: uppercase;
+        color: var(--ink-mute);
+      }
+
+      /* display headline — the main type moment */
+      .display {
+        grid-column: 1 / 12;
+        font-family: var(--display);
+        font-variation-settings: "opsz" 144, "SOFT" 20;
+        font-weight: 400;
+        font-size: clamp(48px, 9.2vw, 156px);
+        line-height: 0.94;
+        letter-spacing: -0.025em;
+        color: var(--ink);
+        margin-bottom: clamp(24px, 4vh, 48px);
+      }
+
+      .display .line {
+        display: block;
+        animation: rise-in 900ms cubic-bezier(0.19, 1, 0.22, 1) both;
+      }
+
+      .display .line:nth-child(1) {
+        animation-delay: 220ms;
+      }
+      .display .line:nth-child(2) {
+        animation-delay: 320ms;
+      }
+      .display .line:nth-child(3) {
+        animation-delay: 420ms;
+      }
+      .display .line:nth-child(4) {
+        animation-delay: 520ms;
+      }
+
+      /* LINE OA — italic + brass */
+      .display em {
+        font-family: var(--display);
+        font-variation-settings: "opsz" 144, "SOFT" 60;
+        font-style: italic;
+        font-weight: 300;
+        color: var(--brass-deep);
+        font-feature-settings: "swsh", "calt";
+      }
+
+      /* Thai line treatment */
+      .display .thai {
+        font-family: var(--display-th);
+        font-weight: 500;
+        letter-spacing: -0.01em;
+      }
+
+      .display .period {
+        color: var(--silk);
+      }
+
+      /* subtitle in refined serif italic */
+      .subtitle {
+        grid-column: 1 / 9;
+        font-family: var(--body);
+        font-style: italic;
+        font-size: clamp(18px, 1.9vw, 26px);
+        line-height: 1.42;
+        color: var(--ink-soft);
+        max-width: 720px;
+        animation: fade-in 900ms ease 680ms both;
+        margin-bottom: clamp(40px, 6vh, 72px);
+      }
+
+      .subtitle .highlight {
+        color: var(--ink);
+        font-style: normal;
+        font-family: var(--display);
+        font-variation-settings: "opsz" 36, "SOFT" 30;
+        font-weight: 500;
+        letter-spacing: -0.01em;
+        border-bottom: 2px solid var(--brass);
+        padding-bottom: 1px;
+      }
+
+      /* credibility ribbon — Thai numerals */
+      .credibility {
+        grid-column: 1 / 11;
+        display: flex;
+        flex-wrap: wrap;
+        gap: clamp(24px, 4vw, 56px);
+        padding: 20px 0;
+        border-top: 1px solid var(--rule-fine);
+        border-bottom: 1px solid var(--rule-fine);
+        margin-bottom: clamp(32px, 5vh, 56px);
+        animation: fade-in 900ms ease 820ms both;
+      }
+
+      .stat {
+        display: flex;
+        align-items: baseline;
+        gap: 14px;
+      }
+
+      .stat .num {
+        font-family: var(--display-th);
+        font-weight: 700;
+        font-size: clamp(32px, 3.4vw, 44px);
+        color: var(--brass-deep);
+        letter-spacing: -0.02em;
+        line-height: 1;
+        position: relative;
+        top: 2px;
+      }
+
+      .stat .label {
+        font-family: var(--mono);
+        font-size: 11px;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        color: var(--ink-mute);
+      }
+
+      .stat .label-en {
+        display: block;
+        color: var(--ink);
+        font-family: var(--body);
+        font-size: 15px;
+        font-style: italic;
+        letter-spacing: 0;
+        text-transform: none;
+        margin-bottom: 2px;
+      }
+
+      /* CTAs */
+      .actions {
+        grid-column: 1 / 9;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 24px;
+        align-items: center;
+        animation: fade-in 900ms ease 980ms both;
+      }
+
+      .cta {
+        display: inline-flex;
+        align-items: center;
+        gap: 14px;
+        padding: 17px 32px;
+        background: var(--ink);
+        color: var(--paper);
+        font-family: var(--body);
+        font-style: italic;
+        font-size: 17px;
+        letter-spacing: 0.01em;
+        text-decoration: none;
+        border-radius: 2px;
+        transition: all 420ms cubic-bezier(0.19, 1, 0.22, 1);
+        position: relative;
+        overflow: hidden;
+      }
+
+      .cta::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(
+          120deg,
+          var(--brass-deep),
+          var(--brass) 50%,
+          var(--brass-deep)
+        );
+        transform: translateX(-100%);
+        transition: transform 500ms cubic-bezier(0.65, 0, 0.35, 1);
+        z-index: 0;
+      }
+
+      .cta:hover::before {
+        transform: translateX(0);
+      }
+
+      .cta span {
+        position: relative;
+        z-index: 1;
+      }
+
+      .cta .arrow {
+        transition: transform 420ms cubic-bezier(0.65, 0, 0.35, 1);
+        font-family: var(--mono);
+        font-size: 14px;
+      }
+
+      .cta:hover .arrow {
+        transform: translateX(6px);
+      }
+
+      .cta-secondary {
+        color: var(--ink-soft);
+        font-family: var(--mono);
+        font-size: 12px;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+        text-decoration: none;
+        padding-bottom: 4px;
+        border-bottom: 1px solid var(--ink-soft);
+        transition: all 320ms ease;
+      }
+
+      .cta-secondary:hover {
+        color: var(--brass-deep);
+        border-color: var(--brass-deep);
+      }
+
+      /* ─── Thai cornice ornament at bottom ─── */
+      .cornice {
+        grid-column: 1 / 13;
+        display: flex;
+        justify-content: center;
+        margin-top: auto;
+        padding-top: clamp(32px, 6vh, 64px);
+        animation: fade-in 1000ms ease 1100ms both;
+      }
+
+      .cornice svg {
+        width: clamp(160px, 28vw, 280px);
+        height: auto;
+        color: var(--brass);
+        opacity: 0.6;
+      }
+
+      /* ─── footer stripe with dev DNA (kept, small, refined) ─── */
+      .footnote {
+        font-family: var(--mono);
+        font-size: 10px;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--ink-mute);
+        display: flex;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 16px;
+        padding-top: 22px;
+        border-top: 1px solid var(--rule-fine);
+        animation: fade-in 700ms ease 1200ms both;
+      }
+
+      .footnote .stack {
+        color: var(--brass-deep);
+      }
+
+      /* ─── keyframes ─── */
+      @keyframes fade-in {
+        from {
+          opacity: 0;
+          transform: translateY(8px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @keyframes rise-in {
+        from {
+          opacity: 0;
+          transform: translateY(28px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @keyframes rule-draw {
+        from {
+          transform: scaleX(0);
+        }
+        to {
+          transform: scaleX(1);
+        }
+      }
+
+      /* ─── responsive ─── */
+      @media (max-width: 900px) {
+        .topbar {
+          flex-direction: column;
+          gap: 12px;
+          align-items: flex-start;
+        }
+        .colophon {
+          justify-content: flex-start;
+          gap: 14px;
+        }
+        .display {
+          grid-column: 1 / 13;
+        }
+        .prelude,
+        .subtitle,
+        .credibility,
+        .actions {
+          grid-column: 1 / 13;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.01ms !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- decorative Thai character watermark, barely visible -->
+    <div class="watermark" aria-hidden="true">ไทย</div>
+
+    <div class="container">
+      <!-- topbar -->
+      <header class="topbar">
+        <div class="mark">
+          PREMPAWEE<span class="dot"> // </span>AI
+        </div>
+        <nav class="colophon">
+          <span>VOL. ๒๕๖๙</span>
+          <span class="sep">·</span>
+          <span>ISSUE ๐๑</span>
+          <span class="sep">·</span>
+          <span>CHIANG MAI, TH</span>
+          <span class="sep">·</span>
+          <span>EST. 2024</span>
+        </nav>
+      </header>
+
+      <!-- main hero -->
+      <main class="hero">
+        <!-- prelude -->
+        <div class="prelude">
+          <span class="prelude-rule"></span>
+          <span class="prelude-text"
+            >A practice in conversational software</span
+          >
+        </div>
+
+        <!-- display headline — the moment -->
+        <h1 class="display">
+          <span class="line">We build</span>
+          <span class="line"><em>LINE&nbsp;OA</em> Chatbots</span>
+          <span class="line">that understand</span>
+          <span class="line thai"
+            >ภาษาไทย<span class="period">.</span></span
+          >
+        </h1>
+
+        <!-- subtitle — refined italic serif -->
+        <p class="subtitle">
+          Not keyword matching.
+          <span class="highlight">Claude&nbsp;AI-powered</span>, fluent in
+          natural Thai. Production-grade infrastructure, shipped.
+        </p>
+
+        <!-- credibility ribbon — Thai numerals as decorative + functional -->
+        <div class="credibility">
+          <div class="stat">
+            <div class="num">๐๓</div>
+            <div>
+              <div class="label-en">Major projects</div>
+              <div class="label">Verdex · NWL · This</div>
+            </div>
+          </div>
+          <div class="stat">
+            <div class="num">๐๖</div>
+            <div>
+              <div class="label-en">Live web properties</div>
+              <div class="label">All running in prod</div>
+            </div>
+          </div>
+          <div class="stat">
+            <div class="num">๑๒</div>
+            <div>
+              <div class="label-en">Verdex iterations</div>
+              <div class="label">Over ๖ major systems</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CTAs -->
+        <div class="actions">
+          <a href="#" class="cta">
+            <span>Talk to the portfolio</span>
+            <span class="arrow">→</span>
+          </a>
+          <a href="#" class="cta-secondary">Packages &amp; pricing</a>
+        </div>
+
+        <!-- Thai cornice ornament — inspired by Wat Arun / Sukhothai rooflines -->
+        <div class="cornice" aria-hidden="true">
+          <svg
+            viewBox="0 0 280 42"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <!-- central ornament inspired by Thai gable finial -->
+            <path
+              d="M140 6 L146 16 L152 12 L160 22 L170 16 L178 26 L188 20 L200 30 L210 24 L222 34"
+              stroke="currentColor"
+              stroke-width="0.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+            <path
+              d="M140 6 L134 16 L128 12 L120 22 L110 16 L102 26 L92 20 L80 30 L70 24 L58 34"
+              stroke="currentColor"
+              stroke-width="0.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+            <!-- center diamond finial -->
+            <path
+              d="M140 2 L144 6 L140 10 L136 6 Z"
+              fill="currentColor"
+            />
+            <!-- long horizontal rule beneath -->
+            <line
+              x1="0"
+              y1="40"
+              x2="280"
+              y2="40"
+              stroke="currentColor"
+              stroke-width="0.4"
+              stroke-dasharray="1 3"
+              opacity="0.5"
+            />
+          </svg>
+        </div>
+      </main>
+
+      <!-- footer colophon -->
+      <footer class="footnote">
+        <span>PREMPAWEE THABBUREE · LINE OA CHATBOT ARCHITECT</span>
+        <span class="stack"
+          >NEXT.JS 16 · CLAUDE · SUPABASE · VERCEL SIN1</span
+        >
+        <span>PREMPAWEE.COM</span>
+      </footer>
+    </div>
+
+    <script>
+      // Subtle cursor-aware parallax for the watermark. Moves just a few
+      // pixels — barely noticeable but adds life.
+      (function () {
+        const watermark = document.querySelector(".watermark");
+        if (!watermark || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+        let rafId = 0;
+        window.addEventListener("pointermove", (e) => {
+          if (rafId) cancelAnimationFrame(rafId);
+          rafId = requestAnimationFrame(() => {
+            const dx = (e.clientX / window.innerWidth - 0.5) * 8;
+            const dy = (e.clientY / window.innerHeight - 0.5) * 12;
+            watermark.style.transform = `translate(${dx}px, ${dy}px)`;
+          });
+        });
+      })();
+    </script>
+  </body>
+</html>
