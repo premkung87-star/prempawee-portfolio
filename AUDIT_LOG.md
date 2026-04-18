@@ -1,8 +1,31 @@
 # Audit Log — Prempawee Portfolio
 
-Last audit: 2026-04-17
+Last audit: 2026-04-18
 
 ---
+
+## 📚 SOP LAYERED DEPLOYMENT — 2026-04-18 · Karpathy + Prempawee extensions
+
+Shipped a two-part SOP stack to harden Claude Code sessions against the failure modes catalogued in §17-§21. Entry point `CLAUDE.md` imports a layered guidance set and codifies the session-opening ritual. Docs-only change, no watchlist files touched — classified LOW risk.
+
+**Deployed:**
+- `KARPATHY.md` — Part 1 reproduces Andrej Karpathy's four original principles verbatim under MIT (Think Before Coding, Simplicity First, Surgical Changes, Goal-Driven Execution). Part 2 adds six Prempawee-specific extensions derived from our own AUDIT_LOG post-mortems: framework-version verification, browser-only success signals, one-commit-per-change discipline, edge-runtime async awaiting, platform-specific CDN verification, observability-before-features.
+- `CLAUDE.md` — new entry point. Imports `@KARPATHY.md` and `@AGENTS.md`, defines the 5-step session-opening ritual (Load Context → Classify Risk → Plan Before Code → Execute With Surgical Discipline → Verify With Signal-Appropriate Strength), enumerates red-flag conditions that stop work immediately.
+- `docs/CLAUDE_CODE_SOP.md` — detailed playbook covering prompt templates, risk classification table, session-closing procedure.
+
+**Verified via session-opening handshake:**
+Opened a fresh Claude Code session and asked it to summarize the loaded context. Claude correctly recalled all four required elements: the 4 Karpathy principles, the 6 watchlist files in AGENTS.md, the `experimental.sri` ban with its CDN-re-encoding rationale, and the 5-step ritual. The verification signal is that the agent answered from loaded context, not by re-reading the source files — meaning the layered `@import` chain is actually active, not sitting on disk.
+
+**Metrics:**
+- 4 files, ~1,041 lines added
+- Merged as PR #1 → commit `9239f54` (from `docs/add-karpathy-sop`)
+- Zero production risk — no code paths, no watchlist files
+
+**Lesson logged from recovery:**
+During this session we hit `/clear` at ~600k tokens without first running the Session Closer procedure in `docs/CLAUDE_CODE_SOP.md §7`. Cost: ~5 minutes reconstructing where we were (which files were drafted, which commits pushed, PR status). Rule: always run Session Closer §7 before `/clear`, especially past 500k tokens — the cost of skipping it scales with token depth.
+
+**Next:**
+Begin Week 1 operational activation plan — Sentry DSN + 3 alert rules, GitHub branch protection on `main` (require PR + status checks + reviewer), HSTS preload submission, then remaining items from `docs/SSS_STATUS.md`. Each item ships as its own commit per KARPATHY.md Part 2 §7.
 
 ## 💎 A+ RESTORED PROPERLY — 2026-04-17 night · full 4-phase workflow complete
 
