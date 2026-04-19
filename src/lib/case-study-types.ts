@@ -15,6 +15,8 @@ export type Screenshot = {
   alt: Bilingual;
   caption: Bilingual;
   stubbed: boolean;
+  width?: number;
+  height?: number;
 };
 
 export type SecurityItem = {

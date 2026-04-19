@@ -89,6 +89,10 @@ describe("Portfolio CaseStudy shape", () => {
     expect(cs?.screenshots.length).toBe(4);
   });
 
+  test("all screenshots are non-stubbed (real images landed)", () => {
+    expect(cs?.screenshots.every((s) => s.stubbed === false)).toBe(true);
+  });
+
   test("security has exactly 6 items", () => {
     expect(cs?.security.length).toBe(6);
   });

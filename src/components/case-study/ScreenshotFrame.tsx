@@ -1,3 +1,4 @@
+import Image from "next/image";
 import type { Screenshot } from "@/lib/case-study-types";
 
 export function ScreenshotFrame({
@@ -25,13 +26,13 @@ export function ScreenshotFrame({
           </span>
         </div>
       ) : (
-        // Plain <img> here — we don't have fixed dimensions until real
-        // screenshots land in PR #2.1, so next/image wouldn't help yet.
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
+        <Image
           src={`/case-studies/${slug}/${screenshot.filename}`}
           alt={screenshot.alt[lang]}
-          className="w-full rounded border border-white/10"
+          width={screenshot.width ?? 2302}
+          height={screenshot.height ?? 2624}
+          sizes="(max-width: 768px) 100vw, 50vw"
+          className="w-full h-auto rounded border border-white/10"
         />
       )}
       <figcaption className="text-[11px] text-[#888] leading-relaxed mt-2">
