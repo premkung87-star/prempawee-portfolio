@@ -21,6 +21,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       alternates,
     },
     {
+      url: `${SITE_URL}/case-studies/this-portfolio`,
+      lastModified: now,
+      changeFrequency: "monthly",
+      priority: 0.8,
+    },
+    {
       url: `${SITE_URL}/fallback`,
       lastModified: now,
       changeFrequency: "monthly",

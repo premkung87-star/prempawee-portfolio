@@ -22,7 +22,6 @@ export async function generateMetadata({
   return {
     title: `${project.caseStudy.hero.title.en} · PREMPAWEE AI`,
     description: project.caseStudy.hero.subtitle.en,
-    robots: { index: false, follow: false },
   };
 }
 
