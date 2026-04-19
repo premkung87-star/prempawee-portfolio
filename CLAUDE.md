@@ -24,19 +24,20 @@ This file is intentionally short. It imports the layered guidance files and stat
 Execute these five steps before taking on any task. This ritual takes ~2 minutes and prevents most of the recurring failure modes documented in AUDIT_LOG.
 
 ### Step 1 — Load Context
-- Re-read this file (CLAUDE.md)
+- Re-read this file (CLAUDE.md) FULLY
 - Confirm the imports above are active (`@KARPATHY.md` and `@AGENTS.md` are loaded)
-- Skim the most recent section of `AUDIT_LOG.md` to recall recent incidents
+- Read `AUDIT_LOG.md` FULLY before any append operation. Do not rely on tail/head for append design — Opus 4.7 reasons over what it has and may miss informal references in untouched sections (see AUDIT_LOG §28 incident).
+- Architect prompts must be literal-explicit. Opus 4.7 follows literally, not generatively. State scope explicitly ("apply to every X", not "apply to the X").
 
 ### Step 2 — Classify Task Risk Level
 Before accepting the user's task, classify it:
 
-| Risk | Examples | Gate |
-|---|---|---|
-| **LOW** | Typo fix, content update in portfolio-data.ts, README edit | TypeScript + unit tests |
-| **MEDIUM** | New component, new API route, new SQL migration | TypeScript + unit tests + build |
-| **HIGH** | Any change to watchlist files (layout.tsx, page.tsx, proxy.ts, chat.tsx, next.config.ts) or CSP directive | + Mandatory Playwright E2E (local + preview) |
-| **CRITICAL** | Schema migration, auth change, new experimental flag, framework upgrade | + All above + dedicated feature branch + AUDIT_LOG note |
+| Risk | Examples | Gate | Effort |
+|---|---|---|---|
+| **LOW** | Typo fix, content update in portfolio-data.ts, README edit | TypeScript + unit tests | medium |
+| **MEDIUM** | New component, new API route, new SQL migration | TypeScript + unit tests + build | high |
+| **HIGH** | Any change to watchlist files (layout.tsx, page.tsx, proxy.ts, chat.tsx, next.config.ts) or CSP directive | + Mandatory Playwright E2E (local + preview) | xhigh |
+| **CRITICAL** | Schema migration, auth change, new experimental flag, framework upgrade | + All above + dedicated feature branch + AUDIT_LOG note | max |
 
 State the classification explicitly. If the user's task spans risk levels, treat it as the highest level.
 
@@ -99,7 +100,7 @@ Even a 3-line note is valuable. Future sessions (and other engineers) will thank
 
 ---
 
-**Version:** 1.1 · **Last updated:** 2026-04-19 · **Philosophy:** Reduce weaknesses before adding features.
+**Version:** 1.2 · **Last updated:** 2026-04-20 · **Philosophy:** Reduce weaknesses before adding features.
 
 ## Case Study Pattern (Established Session 3)
 

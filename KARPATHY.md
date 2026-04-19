@@ -210,6 +210,75 @@ Before adding any non-trivial feature, verify:
 
 **Anti-pattern:** Relying on user complaints as your error monitor. By the time a user complains, you've already lost them.
 
+## 11. Code Review Coverage (Opus 4.7)
+
+**Source:** Anthropic official guidance for Opus 4.7
+
+When invoking code review (local /review or /ultrareview), use coverage-first prompts to prevent silent filtering of findings. Opus 4.7 follows "be conservative" instructions literally and may drop findings it judges below the stated bar.
+
+**Recommended prompt:**
+
+```
+Report every issue you find, including ones you are uncertain about or consider low-severity. Do not filter for importance or confidence at this stage - a separate verification step will do that. Your goal here is coverage: it is better to surface a finding that later gets filtered out than to silently drop a real bug. For each finding, include your confidence level and an estimated severity so a downstream filter can rank them.
+```
+
+**Test:** If recall on bug-finding evals dropped after Opus 4.7 migration, this is likely a harness effect from "be conservative" language, not a capability regression.
+
+## 12. Investigate Before Answering (Opus 4.7)
+
+**Source:** Anthropic official guidance for Opus 4.7
+
+Opus 4.7 uses tools less often than 4.6 by default and reasons more before acting. This is generally better, but for code questions about specific files, it can lead to speculation when reading was warranted.
+
+**Recommended prompt for code questions:**
+
+```
+Never speculate about code you have not opened. If the user references a specific file, you MUST read the file before answering. Make sure to investigate and read relevant files BEFORE answering questions about the codebase. Never make any claims about code before investigating unless you are certain of the correct answer - give grounded and hallucination-free answers.
+```
+
+**Connection to AUDIT_LOG §28:** Numbering collision was caused by partial-file read. Always read full files before append operations.
+
+## 13. Avoid Overengineering (Opus 4.7)
+
+**Source:** Anthropic official guidance for Opus 4.7
+
+Opus 4.7 has a tendency to overengineer by creating extra files, adding unnecessary abstractions, or building flexibility that was not requested. Reinforces KARPATHY Part 1 §2 (Simplicity First) and §3 (Surgical Changes).
+
+**Recommended prompt:**
+
+```
+Avoid over-engineering. Only make changes that are directly requested or clearly necessary. Keep solutions simple and focused:
+
+- Scope: Don't add features, refactor code, or make "improvements" beyond what was asked. A bug fix doesn't need surrounding code cleaned up. A simple feature doesn't need extra configurability.
+
+- Documentation: Don't add docstrings, comments, or type annotations to code you didn't change. Only add comments where the logic isn't self-evident.
+
+- Defensive coding: Don't add error handling, fallbacks, or validation for scenarios that can't happen. Trust internal code and framework guarantees. Only validate at system boundaries (user input, external APIs).
+
+- Abstractions: Don't create helpers, utilities, or abstractions for one-time operations. Don't design for hypothetical future requirements. The right amount of complexity is the minimum needed for the current task.
+```
+
+## 14. Balance Autonomy and Safety (Opus 4.7)
+
+**Source:** Anthropic official guidance for Opus 4.7
+
+Opus 4.7 may take actions that are difficult to reverse or affect shared systems without prompting. Reinforces existing branch protection guardrail at the prompt level.
+
+**Recommended prompt for production work:**
+
+```
+Consider the reversibility and potential impact of your actions. You are encouraged to take local, reversible actions like editing files or running tests, but for actions that are hard to reverse, affect shared systems, or could be destructive, ask the user before proceeding.
+
+Examples of actions that warrant confirmation:
+- Destructive operations: deleting files or branches, dropping database tables, rm -rf
+- Hard to reverse operations: git push --force, git reset --hard, amending published commits
+- Operations visible to others: pushing code, commenting on PRs/issues, sending messages, modifying shared infrastructure
+
+When encountering obstacles, do not use destructive actions as a shortcut. For example, do not bypass safety checks (e.g. --no-verify) or discard unfamiliar files that may be in-progress work.
+```
+
+**Connection to AUDIT_LOG §26:** Branch protection enforces this at the infrastructure level. This prompt enforces it at the reasoning level. Use both.
+
 ---
 
 ## How These 10 Rules Relate
