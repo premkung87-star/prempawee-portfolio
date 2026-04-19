@@ -25,7 +25,9 @@ test.describe("prempawee.com · hydration smoke", () => {
     await expect(
       page.getByText(/I'm Prempawee's portfolio AI|ผม(?:เป็น|คือ) AI ของ Prempawee/i),
     ).toBeVisible();
-    await expect(page.getByText(/LINE OA Chatbots/i)).toBeVisible();
+    await expect(
+      page.getByText(/What do you need built\?|คุณต้องการให้สร้างอะไร/i),
+    ).toBeVisible();
   });
 
   test("consent button hides banner when clicked (§17/§20 regression guard)", async ({
@@ -53,7 +55,7 @@ test.describe("prempawee.com · hydration smoke", () => {
     await expect(th).toHaveAttribute("aria-pressed", "true");
     // TH mode swaps the chat-input placeholder to Thai. Placeholder text
     // lives on the input's placeholder attribute, not as visible text.
-    await expect(page.getByPlaceholder(/ถามอะไรก็ได้เกี่ยวกับ LINE OA/i)).toBeVisible();
+    await expect(page.getByPlaceholder(/คุณต้องการให้สร้างอะไร/i)).toBeVisible();
   });
 
   test("chat input accepts message and streams a response", async ({ page }) => {
