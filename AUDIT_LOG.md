@@ -1,6 +1,60 @@
 # Audit Log — Prempawee Portfolio
 
-Last audit: 2026-04-19
+Last audit: 2026-04-19 (Session 1 close)
+
+---
+
+## ✅ CSP CONNECT-SRC FIXED — 2026-04-19 · §24 follow-up #4 resolved · Session 1 close
+
+§24 follow-up #4 resolved end-to-end: CSP `connect-src` now includes `https://*.sentry.io`, Sentry client SDK transport verified live on preview with HTTP 200 envelope POSTs. Merge of PR #3 into `main` closes the observability loop opened by §23 — error capture is now operational end-to-end in production. Session 1 (DSN activation → Turbopack bundler fix → CSP transport fix) formally complete.
+
+**Execution record:**
+- Branch: `fix/csp-connect-src-sentry` (single-commit branch)
+- Source commit: `207aa6b` — `fix(csp): allow https://*.sentry.io in connect-src for Sentry transport`
+- Merge commit: `9ff881d` (PR #3, fast-forward from `b3cad84`)
+- Merge time: 2026-04-19 · 05:11 UTC (12:11 Bangkok)
+- CI checks: 6/6 passed
+- Diff: `src/proxy.ts` +1/−1 (one token appended to the existing `connect-src` template literal)
+
+**Verification gate results:**
+- **Phase 7.3 local gate:** typecheck pass, 43/43 unit tests, `npm run build` pass with Sentry path detection message (§23 fix still active), E2E 5/6 — sole failure is `smoke.spec.ts:132` CSP-on-localhost-dev, pre-existing per §24 follow-up #3
+- **Phase 7.4 preview build:** `dpl_2BxGPxzXqaoeMqUSSycHJ1qVt8ZA`, Ready in 45s
+- **Phase 7.5 live browser verification (ground truth):**
+  - Live CSP response header — confirmed `connect-src` now includes `https://*.sentry.io`
+  - Network tab — **5 POSTs to `o<orgId>.ingest.us.sentry.io/api/<projectId>/envelope/` returning HTTP 200** (vs 5 `Refused to connect` blocks in Phase 5E pre-fix)
+  - Sentry Traces — **52 spans captured in preview environment**
+  - Console — **zero `Refused to connect` warnings** (down from 9 pre-fix)
+  - Issues dashboard — empty; DevTools-thrown `throw new Error()` appears filtered at Sentry's server-side classification rather than failing in transmission. Transport layer confirmed working via envelope POSTs + span count.
+
+**Follow-ups:**
+- **Closed:** §24 follow-up #4 (CSP connect-src missing sentry.io). Transport verified live with 200 OK envelope POSTs + 52 Traces spans.
+- **Still open from §24:**
+  - #1 `onRouterTransitionStart` hook missing (LOW)
+  - #2 Stale header comment in `src/instrumentation-client.ts` (LOW)
+  - #3 E2E CSP assertion fails on localhost by design (MEDIUM)
+- **New (LOW):** Issues-dashboard classification for real application errors. Phase 7.5 showed envelope POSTs succeed and Traces register, but Issues panel stayed empty for DevTools-thrown errors. Hypothesis: Sentry classifies DevTools-origin exceptions differently from app-code exceptions (possibly deduplicated or filtered as developer-origin). Unverified. **Test plan:** in Session 4, trigger an intentional `/api/chat` failure in production (malformed payload matching a plausible real-user path) and confirm an issue appears in the Issues dashboard with correct fingerprint/severity. Until then, Issues-dashboard empty is not proof of capture-path health; Traces + Network 200s are.
+
+**Meta-lessons:**
+
+1. **Sentry has three observability surfaces, not one — verify at the layer closest to your concern.** Issues, Traces, and Logs each index different signal types. "Dashboard is empty" cannot mean "nothing captured." Transport verification belongs at the Network tab (envelope POST status) + Traces (span count). Issues is downstream of both and depends on server-side classification. Had we gated on "Issues dashboard shows our test error" in Phase 7.5, we'd have concluded the fix failed when the transport layer was actually green. This is §10 (Observability Before Features) refined by one layer: observability that lands in surface A does not imply surface B.
+
+2. **Pre-merge Phase 5E live browser probe caught a §20-class silent break before prod exposure.** The CSP `connect-src` mismatch was undetectable by `npm run test:e2e` against localhost (dev-mode CSP bypass — §24 follow-up #3) and undetectable by automated Playwright against the SSO-protected preview (401). The only verification path that worked was a manual SSO-login DevTools probe before merge. §20 ran in reverse: instead of being blind to a break, we named the break before prod exposure by walking the request path manually. Lesson: when automated signals are structurally unable to reach a layer, a 3-minute human probe is not a fallback — it is the primary verification instrument for that layer.
+
+3. **Single-commit branches + separate docs commits keep `main` bisect-clean.** History on main now reads:
+   ```
+   9ff881d  Merge PR #3 (CSP fix)
+   207aa6b  fix(csp): allow https://*.sentry.io in connect-src
+   b3cad84  Merge PR #2 (rename + docs)
+   40ac6b3  docs(audit-log): §24 — Sentry client SDK restored
+   3d8f748  fix(sentry): rename client config to Turbopack convention
+   ```
+   Every functional change is one bisectable commit. Docs commits are separate, so `git bisect` can never land on a commit that only edited `AUDIT_LOG.md`. §7 discipline purchased by execution, not just by policy.
+
+**Session 1 exit state:**
+- Sentry DSN active across all 3 envs (§22)
+- Sentry client SDK loads under Turbopack (§23 → §24 verified)
+- Sentry transport unblocked by CSP (§25)
+- Error capture operational end-to-end; Issues-classification probe deferred to Session 4
 
 ---
 
