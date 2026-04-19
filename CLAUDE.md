@@ -100,3 +100,44 @@ Even a 3-line note is valuable. Future sessions (and other engineers) will thank
 ---
 
 **Version:** 1.0 · **Last updated:** 2026-04-18 · **Philosophy:** Reduce weaknesses before adding features.
+
+## Case Study Pattern (Established Session 3)
+
+When adding a new case study to the portfolio, follow this established pattern.
+
+### Route Structure
+- URL: `/case-studies/[slug]` (kebab-case slug)
+- Server page: `src/app/case-studies/[slug]/page.tsx`
+- Layout wrapper: `src/app/case-studies/layout.tsx` (sets `bg-grid`)
+
+### Data Layer
+- Add `slug: string` and `caseStudy: CaseStudy` fields to the relevant `Project` entry in `src/lib/portfolio-data.ts`
+- Types live in `src/lib/case-study-types.ts` (`CaseStudy`, `Bilingual<T>`, `MetricCard`, `Screenshot`, `SecurityItem`)
+- All user-facing strings use `Bilingual<string>` shape `{ en, th }`
+
+### Component Stack
+Use existing components in `src/components/case-study/`:
+- `CaseStudyShell` — client wrapper that owns `lang` state (required because server page uses async params)
+- `Hero`, `Section`, `MetricGrid`, `ArchSVG`, `ScreenshotFrame`, `LangToggle`
+
+Do NOT create parallel components. Extend existing ones if needed.
+
+### Screenshots
+- Path: `public/case-studies/[slug]/*.webp`
+- Format: WebP at quality 85 (`cwebp -q 85 input.png -o output.webp`)
+- Specify `width` and `height` on `Screenshot` entries to prevent CLS — measure with `sips` on macOS
+- Use `next/image` (already wired in `ScreenshotFrame`)
+
+### Stub-First Release Pattern
+For case studies that need real data/screenshots that aren't ready yet:
+1. **First PR:** Ship infrastructure with `stubbed: true` on screenshots + `robots: { index: false, follow: false }` in `generateMetadata`
+2. **Second PR:** Replace placeholder files with real assets, flip `stubbed: false`, remove robots noindex, add sitemap entry
+
+This allows incremental release without exposing incomplete pages to Google.
+
+### Metrics Honesty
+Use Target metrics + transparency note when no real data exists yet. Better than fake numbers.
+
+### Tests
+- Place test files at `src/**/*.test.{ts,tsx}` (vitest include pattern)
+- Don't put tests in `tests/unit/` — they won't be picked up
