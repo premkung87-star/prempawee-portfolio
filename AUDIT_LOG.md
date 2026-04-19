@@ -1,6 +1,42 @@
 # Audit Log — Prempawee Portfolio
 
-Last audit: 2026-04-18
+Last audit: 2026-04-19
+
+---
+
+## ✅ SENTRY CLIENT SDK RESTORED — 2026-04-19 · §23 fix complete
+
+Queued fix from §23 executed, locally verified, and confirmed live via manual browser probe on the SSO-protected preview. Single-file rename per the Turbopack scanner convention; no code-body changes. Phase 5E caught a deeper follow-on issue — our own CSP `connect-src` allowlist silently blocks Sentry transport — **before** prod exposure. Error capture dashboard remains empty until that CSP fix lands in a separate branch (§7 discipline).
+
+**Execution record:**
+- Branch: `fix/sentry-turbopack-client-config` (off `main`)
+- Commit: `3d8f748`
+- Change: `git mv sentry.client.config.ts src/instrumentation-client.ts`
+- Git rename similarity: 100% · 1 file changed · 0 insertions · 0 deletions
+- Push: upstream tracked, Vercel preview `dpl_5gGoASRVhC4cRFsozp9dnP51hNiN` → `● Ready`
+- Preview URL (commit-pinned): `https://prempawee-portfolio-8yga36ry6-premkung87-stars-projects.vercel.app`
+
+**Verification gate results:**
+- **Phase 1 (pre-flight):** ✅ `next.config.ts` uses `withSentryConfig()` wrapper with no direct path reference; `src/instrumentation.ts` only imports server + edge configs; legacy `sentry.client.config.ts` genuinely orphaned under Turbopack
+- **Phase 2 (branch + rename):** ✅ clean `renamed:` entry at 100% similarity
+- **Phase 3 (local gates):**
+  - `npm run typecheck` → pass
+  - `npm run test` → 43/43 pass
+  - `npm run build` → pass, **and now prints** `[@sentry/nextjs] ACTION REQUIRED: … export an onRouterTransitionStart hook from your instrumentation-client.(js|ts) file` — absent pre-rename, so Turbopack now detects the file at the new path
+  - `BASE_URL=http://localhost:3000 npm run test:e2e` → 5/6 pass; sole failure (`smoke.spec.ts:132` CSP-header assertion) triangulated as **pre-existing** via three independent checks: `src/proxy.ts:50-55` intentional dev-mode CSP bypass, same failure reproducible on `main` pre-branch, test has no env guard
+- **Phase 4 (commit + push):** ✅ `3d8f748` pushed, preview Ready on first poll
+- **Phase 5A–D (automated preview E2E):** ⏭ blocked — Vercel SSO deployment protection returns 401 to Playwright. Resolved by shifting to manual browser verification under SSO login (Option E) rather than provisioning a bypass token — provisioning one would have been a §7 violation (more change than the rename itself)
+- **Phase 5E (manual browser on preview):** ✅ **VERIFIED.** Five `Refused to connect` entries in DevTools Console for `https://o<orgId>.ingest.us.sentry.io/api/<projectId>/envelope/`, all originating from bundled chunk `@iglprx6hgh3a.js:9` — definitive evidence that the Sentry client SDK is now **loaded, active, and attempting transport**. `window.Sentry` returns `undefined`, which is the expected shape in `@sentry/nextjs ≥10.49.0` (module-singleton pattern rather than a global); the five outbound fetches prove the SDK is functioning regardless of the missing global. Page interactivity intact: consent button visible, chat widget present, no hydration errors (§17/§20 regression guards green). Rename is **complete and correct**. CSP `connect-src` is the sole remaining blocker — predicted via Phase 5 source analysis before browser verification, confirmed live.
+
+**Follow-ups discovered during fix (hold for separate branches — §7 discipline):**
+
+1. **(LOW) `onRouterTransitionStart` hook missing** — `src/instrumentation-client.ts` does not export `onRouterTransitionStart`. Navigation traces will not appear in Sentry until added; error capture + replay unaffected. Fix: `export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;` in a future single-purpose branch.
+2. **(LOW) Stale header comment at `src/instrumentation-client.ts:2-3`** — predates §22 DSN activation; still implies the user activates Sentry by adding the DSN env var. Correct next time the file is touched.
+3. **(MEDIUM) E2E CSP test fails on localhost by design** — `tests/e2e/smoke.spec.ts:125-132` asserts `content-security-policy` header truthy; dev mode returns empty CSP per `src/proxy.ts:50-55` intentional bypass. Per §20 signal hygiene, routine baseline failures mask real regressions. Fix: `test.skip(baseURL.includes("localhost"), ...)` or split into env-scoped tests.
+4. **(MEDIUM-HIGH) CSP `connect-src` missing `https://*.sentry.io`** — `src/proxy.ts:60` allowlist enumerates supabase, anthropic, upstash, vercel-scripts, vercel-insights; no sentry.io entry. Pre-rename this was invisible because the client never loaded. Post-rename, **every** Sentry-captured error triggers `Refused to connect` and silently fails to transmit — confirmed live in Phase 5E (5 blocked envelope POSTs to `o<orgId>.ingest.us.sentry.io`). Upgraded from MEDIUM → MEDIUM-HIGH on live confirmation. Same-day fix planned on branch `fix/csp-connect-src-sentry` with single-line edit appending `https://*.sentry.io` (chosen over `*.ingest.sentry.io` because CSP wildcards do not match the regional `ingest.us.sentry.io` suffix, and chosen over `*.ingest.us.sentry.io` because a region change would re-trigger the same silent-break class).
+
+**Meta-lesson:**
+Pre-rename, "Sentry dashboard quiet" meant the client never loaded (known, §23). Post-rename, the same signal could mean "no errors captured" OR "CSP blocks transport" — indistinguishable without a Network-tab probe. §20 pattern averted by refusing to treat dashboard-quiet as a success signal and instead auditing the `connect-src` allowlist before Phase 5E. The observability tool was about to become invisible to itself for a second time, for a different reason, one layer deeper. Catching it at analysis time rather than via "why hasn't Sentry paged anyone in two weeks" is the whole point of §10.
 
 ---
 
