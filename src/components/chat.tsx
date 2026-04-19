@@ -191,8 +191,8 @@ export function Chat() {
   }
 
   const placeholders = {
-    en: "Ask me anything about LINE OA chatbots...",
-    th: "ถามอะไรก็ได้เกี่ยวกับ LINE OA Chatbot...",
+    en: "What do you need built? Describe your project...",
+    th: "คุณต้องการให้สร้างอะไร? เล่าเกี่ยวกับโปรเจคของคุณ...",
   };
 
   return (
@@ -200,7 +200,7 @@ export function Chat() {
       {/* Visually hidden h1 for SEO + screen readers. Visible header below
           is stylized terminal-brand markup. */}
       <h1 className="sr-only">
-        Prempawee — LINE OA Chatbot Developer for Thai Businesses
+        Prempawee — Solo AI Developer shipping production systems
       </h1>
       {/* Header */}
       <header className="flex items-center justify-between px-4 py-3 border-b border-white/10 shrink-0">
@@ -324,22 +324,27 @@ export function Chat() {
           <div className="text-[15px] text-[#ccc] leading-relaxed max-w-[85%] whitespace-pre-wrap">
             {lang === "th" ? (
               <>
-                สวัสดีครับ ผมเป็น AI ของ Prempawee{"\n\n"}ผมสร้าง{" "}
+                ยินดีต้อนรับ ผมคือ AI portfolio ของ Prempawee{"\n\n"}เขาเป็น{" "}
                 <strong className="text-white font-medium">
-                  LINE OA Chatbot
+                  Solo AI Developer
                 </strong>{" "}
-                สำหรับธุรกิจไทย — แชทบอทที่ใช้ Claude AI เข้าใจภาษาไทยธรรมชาติ ไม่ใช่แค่จับคีย์เวิร์ด
-                {"\n\n"}มีอะไรให้ช่วยครับ? เล่าเรื่องธุรกิจของคุณ หรือถามอะไรก็ได้
+                อยู่ที่เชียงใหม่ ส่งมอบ{" "}
+                <strong className="text-white font-medium">
+                  ระบบ production
+                </strong>{" "}
+                ให้ธุรกิจที่ต้องการความเร็ว — LINE chatbot, admin dashboard, IoT platform, AI agent ทั้งหมดใช้ Claude, deploy แล้ว, ใช้งานจริงอยู่ตอนนี้{"\n\n"}คุณต้องการให้สร้างอะไร? เล่าโปรเจคของคุณมาได้เลย หรือถามอะไรก็ได้
               </>
             ) : (
               <>
-                Welcome. I&apos;m Prempawee&apos;s portfolio AI.{"\n\n"}I build{" "}
+                Welcome. I&apos;m Prempawee&apos;s portfolio AI.{"\n\n"}He&apos;s a{" "}
                 <strong className="text-white font-medium">
-                  LINE OA Chatbots
+                  Solo AI Developer
                 </strong>{" "}
-                for Thai businesses — Claude-powered, fluent in natural Thai,
-                not just keyword matching.{"\n\n"}What brings you here? Tell me about
-                your business, or ask me anything.
+                based in Chiang Mai. He ships{" "}
+                <strong className="text-white font-medium">
+                  production systems
+                </strong>{" "}
+                for companies that need to move fast — LINE chatbots, admin dashboards, IoT platforms, AI agents. All Claude-powered, all deployed, all live.{"\n\n"}What do you need built? Tell me about your project, or ask me anything.
               </>
             )}
           </div>

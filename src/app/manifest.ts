@@ -5,10 +5,10 @@ export const revalidate = 31536000;
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "PREMPAWEE // AI — LINE OA Chatbot Developer",
+    name: "PREMPAWEE // AI — Solo AI Developer / Chiang Mai",
     short_name: "Prempawee AI",
     description:
-      "AI-powered portfolio for Prempawee's LINE OA Chatbot development services.",
+      "AI-powered portfolio for Prempawee — Solo AI Developer in Chiang Mai shipping production systems.",
     start_url: "/",
     display: "standalone",
     background_color: "#0a0a0a",

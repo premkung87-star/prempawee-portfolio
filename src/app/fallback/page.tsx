@@ -13,7 +13,7 @@ import {
 export const metadata: Metadata = {
   title: "PREMPAWEE // Portfolio — Offline Mode",
   description:
-    "LINE OA Chatbot Developer. View the full portfolio, pricing, case studies, and contact info while the AI chat is offline.",
+    "Solo AI Developer in Chiang Mai. View the full portfolio, pricing, case studies, and contact info while the AI chat is offline.",
 };
 
 export default function FallbackPage() {
@@ -45,13 +45,16 @@ export default function FallbackPage() {
           </h2>
           <p className="text-[15px] text-[#ccc] leading-relaxed max-w-[85%]">
             I&apos;m{" "}
-            <strong className="text-white font-medium">Prempawee</strong>, a
-            LINE OA Chatbot developer building{" "}
+            <strong className="text-white font-medium">Prempawee</strong>, a{" "}
             <strong className="text-white font-medium">
-              intelligent chatbots for Thai businesses
-            </strong>
-            . My bots understand natural language &mdash; not just keywords.
-            Powered by Claude AI, Supabase, and Next.js, deployed on Vercel.
+              Solo AI Developer
+            </strong>{" "}
+            based in Chiang Mai, shipping{" "}
+            <strong className="text-white font-medium">
+              production systems
+            </strong>{" "}
+            for Thai businesses &mdash; LINE chatbots, admin dashboards, IoT
+            platforms, AI agents. All Claude-powered, deployed, and live.
           </p>
         </section>
 
