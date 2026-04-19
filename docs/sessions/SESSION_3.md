@@ -134,6 +134,13 @@ All feature branches pruned post-merge. Tree pristine.
 | Cleanup fake seed data from Supabase | After real traffic | DELETE statements in seed script footer |
 | Add `tool-results.tsx` deep-link "View full case study →" | PR #3 (Session 7) | Deferred from PR #7 |
 
+## Governance Lessons Codified
+
+Session 3 introduced 3 new patterns documented in `AUDIT_LOG.md`:
+- **§26** — Branch protection blocking direct push (architect prompt design rule)
+- **§27** — Stub-first release pattern (atomic gate-flip across PRs)
+- **§28** — Cherry-pick recovery for governance compliance
+
 ---
 
 ## Production State (End of Session)

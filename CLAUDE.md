@@ -99,7 +99,7 @@ Even a 3-line note is valuable. Future sessions (and other engineers) will thank
 
 ---
 
-**Version:** 1.0 · **Last updated:** 2026-04-18 · **Philosophy:** Reduce weaknesses before adding features.
+**Version:** 1.1 · **Last updated:** 2026-04-19 · **Philosophy:** Reduce weaknesses before adding features.
 
 ## Case Study Pattern (Established Session 3)
 
