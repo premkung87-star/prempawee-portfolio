@@ -57,7 +57,7 @@ function buildCsp(nonce: string, isDev: boolean): string {
     `default-src 'self'`,
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' https://va.vercel-scripts.com`,
     `style-src 'self' 'unsafe-inline'`,
-    `connect-src 'self' https://*.supabase.co https://api.anthropic.com https://*.upstash.io https://va.vercel-scripts.com https://vitals.vercel-insights.com`,
+    `connect-src 'self' https://*.supabase.co https://api.anthropic.com https://*.upstash.io https://va.vercel-scripts.com https://vitals.vercel-insights.com https://*.sentry.io`,
     `img-src 'self' data: blob: https://*.sentry.io`,
     `font-src 'self' https://fonts.gstatic.com`,
     `frame-ancestors 'none'`,
