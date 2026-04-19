@@ -197,7 +197,7 @@ export const CONTACT = {
   // personal LINE is addable, set to `https://line.me/ti/p/<lineId>`.
   // Until then, mailto: is the reliable fallback.
   contactUrl:
-    "mailto:prempaweet20@gmail.com?subject=LINE%20OA%20Chatbot%20project&body=Hi%20Prempawee%2C%0A%0AI'm%20interested%20in%20a%20LINE%20OA%20Chatbot%20for%20my%20business.%0A%0ABusiness%20type%3A%0AWhich%20package%3A%0APreferred%20timeline%3A%0A%0AThanks%2C%0A",
+    "mailto:prempaweet20@gmail.com?subject=Project%20inquiry&body=Hi%20Prempawee%2C%0A%0AI'm%20interested%20in%20starting%20a%20project%20with%20you.%0A%0ABusiness%20type%3A%0AScope%2FRequirements%3A%0APreferred%20timeline%3A%0A%0AThanks%2C%0A",
   fastwork: "https://fastwork.co",
   responseTime: "2-4 hours during working hours",
 } as const;
@@ -207,8 +207,8 @@ export const CONTACT = {
 export const TRUST_FACTS = {
   location: { en: "Chiang Mai", th: "เชียงใหม่" },
   responseTime: { en: "Reply 2-4h", th: "ตอบใน 2-4 ชม." },
-  projects: { en: "3 live bots", th: "3 บอทใช้งานจริง" },
-  stack: { en: "Claude-powered", th: "ขับเคลื่อนด้วย Claude" },
+  projects: { en: "3 production systems", th: "3 ระบบใช้งานจริง" },
+  stack: { en: "Claude Opus + Sonnet", th: "Claude Opus + Sonnet" },
 } as const;
 
 // Suggested prompt chips shown before first user turn. Each chip triggers
