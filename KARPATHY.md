@@ -279,12 +279,56 @@ When encountering obstacles, do not use destructive actions as a shortcut. For e
 
 **Connection to AUDIT_LOG §26:** Branch protection enforces this at the infrastructure level. This prompt enforces it at the reasoning level. Use both.
 
+## 15. No Inline # Comments in Architect Shell Commands
+
+**Source:** pawee-workflow-kit v1.0.2, `.pawee/extensions/15-no-inline-shell-comments.md`
+
+**Rule:** Architect-dispatched shell command blocks must not carry inline `# comment` text on the same line as a command. Move comments to dedicated preceding lines, or omit them.
+
+**Rationale:** zsh (macOS default since Catalina) does not enable `interactive_comments` in interactive mode, so a pasted `echo "hi"  # note` emits `zsh: command not found: #` — noise that contaminates the Builder's report and hides real errors. bash tolerates inline `#`, but prompts flow between both shells. Dedicated comment lines parse identically in zsh, bash, and CI shells.
+
+**Examples:**
+
+```bash
+# WRONG (breaks on zsh)
+git status  # check working tree
+
+# RIGHT
+git status
+```
+
+**Enforcement:** Architect filters own prompts pre-dispatch; Builder surfaces residual noise in final report; a 4th occurrence escalates to pre-dispatch lint.
+
+**Full detail + kit incident history:** `.pawee/extensions/15-no-inline-shell-comments.md`
+
+## 16. Architect Verify Before Claim
+
+**Source:** pawee-workflow-kit v1.0.2, `.pawee/extensions/16-architect-verify-before-claim.md`
+
+**Rule:** Architect must verify claimed technical facts (file paths, existence, line numbers, API names, bug descriptions) against the actual repo state before asserting them in a dispatched prompt. When cheap verification is blocked, structure the prompt as investigate-first with a CHECKPOINT halt and defer the action prompt until Builder's report returns.
+
+**Rationale:** Architect lacks direct repo access and memory decays as code evolves. Fabricated claims poison Builder execution — either Builder follows the wrong claim and produces incorrect output, or Builder catches the mismatch and wastes a round-trip on clarification. Either degrades velocity. Upstream fix: Architect pays a tiny inspection cost pre-dispatch instead of a round-trip cost post-dispatch.
+
+**Examples:**
+
+```text
+WRONG — "Fix the bug on line 47 of src/foo.ts where we have PATTERN."
+         (if foo.ts / line 47 / PATTERN aren't verified, Builder may execute incorrectly)
+
+RIGHT — "TASK 1: grep -rn 'PATTERN' src/ — report exact file + line + context.
+         CHECKPOINT: HALT. Architect designs fix after Builder reports."
+```
+
+**Enforcement:** Architect runs a pre-dispatch checklist (memory-sourced claim → verify or defer); Builder HALTs at CHECKPOINT when inspection contradicts a claim; every mismatch caught at CHECKPOINT is logged to AUDIT_LOG for future rule tightening.
+
+**Full detail + kit incident history:** `.pawee/extensions/16-architect-verify-before-claim.md`
+
 ---
 
-## How These 10 Rules Relate
+## How These 16 Rules Relate
 
 Rules 1-4 (Karpathy) = **upstream discipline** — prevent mistakes before they happen.
-Rules 5-10 (Prempawee) = **downstream safeguards** — catch mistakes when they inevitably happen.
+Rules 5-16 (Prempawee) = **downstream safeguards** — catch mistakes when they inevitably happen.
 
 Together they form a layered defense:
 - Karpathy stops you from confidently writing wrong code

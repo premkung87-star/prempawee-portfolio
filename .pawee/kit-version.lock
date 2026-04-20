@@ -1,0 +1,26 @@
+# pawee-workflow-kit version lock
+# Adopted into prempawee.com on: 2026-04-20
+# Kit source: https://github.com/premkung87-star/pawee-workflow-kit
+
+kit_version: v1.0.2
+kit_commit: 8e4b841e96b93bc23e0eb765c937a42899e8fe55
+kit_tag_object: 621f10a7b9a308613ee94541d03234413600d57b
+adoption_date: 2026-04-20
+adoption_strategy: Option A (Minimal — preserve prempawee's mature governance)
+adoption_branch: chore/adopt-kit-v1.0.2
+
+# What was adopted from kit:
+adopted_components:
+  - .pawee/extensions/ (12 files, §5-§16)
+  - .pawee/audit-patterns/
+  - .pawee/tags/
+  - KARPATHY.md §15 + §16 appended to Part 2 (inline style preserved)
+
+# What was NOT adopted (preserved prempawee-mature):
+preserved_prempawee_originals:
+  - CLAUDE.md (5-step Session Ritual + Risk+Effort matrix)
+  - AUDIT_LOG.md (26 entries, 80.9 KB of incident history)
+  - docs/CLAUDE_CODE_SOP.md (custom, no kit equivalent)
+  - docs/OPERATIONS.md (real 6.9KB content vs 5KB scaffold)
+  - docs/SSS_STATUS.md (real 10-axis status)
+  - docs/OPUS_4_7_GUIDANCE.md (custom, no kit equivalent)
