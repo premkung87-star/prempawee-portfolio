@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "pawee-wiki": {
+      "command": "npx",
+      "args": [
+        "tsx",
+        "/Users/premmynotnerdyboy/Desktop/pawee-workflow-kit/wiki/.infra/mcp-server/server.ts"
+      ]
+    }
+  }
+}
