@@ -1,10 +1,10 @@
-pawee-workflow-kit v2.0.0-beta.3
+pawee-workflow-kit v2.2.0-beta.5
 adopted: 2026-04-20 (v1.0.2)
-migrated: 2026-04-24 (v2.0.0-beta.3)
-kit_commit: 1a46a57d9deccb98ea3b05d8e64964e91a78670c
-kit_tag: v2.0.0-beta.3
+migrated: 2026-04-25 (v2.2.0-beta.5)
+kit_commit: cf4b9d20dab82dbe0f3e3578e3d3a18056a827a6
+kit_tag: v2.2.0-beta.5
 extensions_count: 15
-migrated_from: v1.0.2 (commit 8e4b841e96b93bc23e0eb765c937a42899e8fe55)
+migrated_from: v2.0.0-beta.3 (commit 1a46a57d9deccb98ea3b05d8e64964e91a78670c) — original v1.0.2 commit 8e4b841
 adoption_strategy: Option A Minimal (preserved through migration)
 
 # Preserved prempawee-mature originals (not overwritten by migration):
