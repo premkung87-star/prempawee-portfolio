@@ -109,6 +109,62 @@ const ENTRIES = [
       ],
     },
   },
+  {
+    title: "What about NDAs and IP ownership?",
+    category: "faq",
+    content:
+      "Prempawee will sign client-provided NDAs after a 15-minute discovery call. Default IP terms: the client owns all deliverables (source code, designs, documentation) on final payment. Prempawee retains the right to reference the work in his portfolio (project name, technology stack, public-facing screenshots), with any sensitive numbers, client identities, or business-confidential details redacted. If the client requires full confidentiality, this is negotiable but typically affects pricing because it removes the portfolio reference value.",
+    metadata: { last_updated: "2026-04-25" },
+  },
+  {
+    title: "What are the payment terms?",
+    category: "faq",
+    content:
+      "Standard payment terms across all three packages: 50% upfront at kickoff, 50% on delivery. Preferred method is PromptPay (THB) for Thai clients; bank transfer is also accepted. Invoices are issued at kickoff and at delivery. International clients can pay via bank transfer in THB equivalent. The 50% upfront covers research, design, and initial build; the 50% on delivery is paid after the staging environment passes client acceptance and before production deploy.",
+    metadata: { last_updated: "2026-04-25" },
+  },
+  {
+    title: "What about maintenance after the warranty period?",
+    category: "faq",
+    content:
+      "Each package includes a built-in warranty period: Starter 7 days, Pro 14 days, Enterprise 30 days. After the warranty period ends, ongoing maintenance is available two ways. Ad-hoc rate: 800 THB per hour, billed in 30-minute increments. Monthly retainer: 8,000 THB per month, includes 12 hours of work, with same-business-day response for any reported issue. Hours beyond the retainer are 700 THB per hour. Retainer can be paused or cancelled with 30 days notice. The retainer is the right choice for clients running production systems who want a predictable response SLA; ad-hoc is the right choice for occasional fixes.",
+    metadata: { last_updated: "2026-04-25" },
+  },
+  {
+    title: "Does Prempawee accept equity or revenue share instead of cash?",
+    category: "faq",
+    content:
+      "At this stage of the business, Prempawee works on cash-only terms. Equity, revenue share, or other non-cash compensation may be considered case-by-case for unique opportunities — typically projects valued at 200,000 THB equivalent or higher with a clear product-market fit signal. For early-stage startups without funding, the more practical path is usually a smaller-scope cash-paid Starter or Pro package to validate the build before committing to a larger build with non-cash terms.",
+    metadata: { last_updated: "2026-04-25" },
+  },
+  {
+    title: "What are the working hours and meeting availability?",
+    category: "faq",
+    content:
+      "Prempawee is based in Chiang Mai and works in Indochina Time (UTC+7). Standard working hours are weekdays, with response time of 2 to 4 hours during working hours for chat, email, and LINE messages. Synchronous video meetings are available for the free 15-minute consultation, kickoff, and major milestone reviews; otherwise the working style is async-first to maximize build time. International clients in EU or US time zones: meetings can be scheduled outside Bangkok working hours by mutual agreement, but day-to-day async communication remains the default.",
+    metadata: { last_updated: "2026-04-25" },
+  },
+  {
+    title: "What does the client receive on delivery day?",
+    category: "faq",
+    content:
+      "On delivery day, every package includes the following 8 deliverables: (1) source code repository access on GitHub or as a zipped archive, (2) deployment credentials including hosting login and database access, (3) ENV variable documentation listing every required key with rotation guidance, (4) video tutorial in Thai walking through admin operations and common tasks, (5) written runbook in Markdown format with bilingual sections, (6) signed warranty terms document specifying the warranty window for the purchased package, (7) ongoing support channel via LINE chat or email, and (8) a system architecture diagram showing components and data flow. The Pro and Enterprise packages additionally include 30-minute and 60-minute live training sessions respectively.",
+    metadata: { last_updated: "2026-04-25" },
+  },
+  {
+    title: "What language are the deliverables and documentation in?",
+    category: "faq",
+    content:
+      "Source code comments are in English, since the technical stack (TypeScript, React, Supabase, Anthropic SDK) and likely future maintainers expect English. Written documentation is in English with a Thai language summary at the top of each document, so a non-English-reading owner can understand the system at a glance. Video tutorials are recorded in Thai, since the daily operator is most often a Thai-speaking business owner or staff member. The chatbot itself, if part of the project, runs bilingually EN and TH from day one. If the client prefers Thai-only or English-only deliverables, this is configurable at kickoff.",
+    metadata: { last_updated: "2026-04-25" },
+  },
+  {
+    title: "When does the timeline start, and what causes delays?",
+    category: "faq",
+    content:
+      "Quoted timelines (Starter 5 days, Pro 14 days, Enterprise 30 days) start from the approved-specification date, not the date of inquiry. The approved-specification milestone happens after the free 15-minute consultation, the requirement form is completed, and Prempawee delivers a flow diagram and Rich Menu wireframes for client approval. Common delay drivers, all flagged at kickoff: LINE OA admin access not granted from the LINE Developers Console adds typically 2 to 3 days, content and copy not provided by client adds 3 to 5 days, mid-project scope changes vary in impact and are quoted as a separate change order. Prempawee will surface delay risk in writing within 24 hours of the cause appearing, so neither side discovers a missed date in the final week.",
+    metadata: { last_updated: "2026-04-25" },
+  },
 ];
 
 /**
