@@ -250,9 +250,13 @@ export function Chat() {
             />
             {lang === "th" ? "AI ออนไลน์" : "AI Online"}
           </div>
-          {/* Primary CTA — visible + reachable even if the chat is slow */}
+          {/* Primary CTA — visible + reachable even if the chat is slow.
+              External link (LINE) opens in a new tab so the portfolio
+              context isn't torn down mid-browse. */}
           <a
             href={CONTACT.contactUrl}
+            target="_blank"
+            rel="noopener noreferrer"
             className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-white bg-white/10 hover:bg-white/20 border border-white/10 rounded transition-colors"
           >
             {lang === "th" ? "ติดต่อ" : "Contact"}
@@ -393,6 +397,8 @@ export function Chat() {
               </p>
               <a
                 href={CONTACT.contactUrl}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-white bg-white/10 hover:bg-white/20 border border-white/10 rounded transition-colors"
               >
                 {lang === "th" ? "เริ่มโปรเจค" : "Start a project"}

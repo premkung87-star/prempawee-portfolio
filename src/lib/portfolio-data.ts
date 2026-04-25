@@ -590,10 +590,12 @@ export const CONTACT = {
   email: "prempaweet20@gmail.com",
   linkedin: "https://www.linkedin.com/in/prempawee",
   line: "Prempawee (Personal LINE)",
-  // Direct LINE chat URL — Thai buyers prefer LINE over email. If the
-  // personal LINE is addable, set to `https://line.me/ti/p/<lineId>`.
-  // Until then, mailto: is the reliable fallback.
-  contactUrl:
+  // Direct LINE chat URL — Thai buyers prefer LINE over email, and
+  // opening a 1:1 chat with the actual developer (vs an OA) converts
+  // better for project intake. Email remains available as a secondary
+  // path via the LeadCaptureCard / error-fallback surfaces.
+  contactUrl: "https://line.me/ti/p/EeqOwz9udS",
+  mailtoFallback:
     "mailto:prempaweet20@gmail.com?subject=Project%20inquiry&body=Hi%20Prempawee%2C%0A%0AI'm%20interested%20in%20starting%20a%20project%20with%20you.%0A%0ABusiness%20type%3A%0AScope%2FRequirements%3A%0APreferred%20timeline%3A%0A%0AThanks%2C%0A",
   fastwork: "https://fastwork.co",
   responseTime: "2-4 hours during working hours",
