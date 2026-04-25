@@ -1,8 +1,13 @@
 // Client-side Sentry init. Runs in the browser. No-op when SENTRY_DSN is
-// unset — safe to ship to production immediately; user activates by adding
-// the DSN env var. See docs/OPERATIONS.md#observability for setup.
+// unset. See docs/OPERATIONS.md#observability for setup.
 
 import * as Sentry from "@sentry/nextjs";
+
+// Required by @sentry/nextjs ≥10.49 for navigation traces under Turbopack.
+// The SDK reads this exported binding from instrumentation-client.(ts|js).
+// Safe to export unconditionally — captureRouterTransitionStart is a no-op
+// when Sentry.init() has not run.
+export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;
 
 const dsn = process.env.NEXT_PUBLIC_SENTRY_DSN;
 
