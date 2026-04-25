@@ -35,7 +35,7 @@ export function Hero({
 
   return (
     <section
-      className="relative h-dvh min-h-[720px] bg-black text-white overflow-hidden"
+      className="relative h-dvh min-h-[560px] sm:min-h-[720px] bg-black text-white overflow-hidden"
       data-screen-label="01 Hero"
     >
       <DotField />
@@ -83,7 +83,7 @@ export function Hero({
         <h1
           className="font-mono font-bold m-0"
           style={{
-            fontSize: "clamp(48px, 10vw, 168px)",
+            fontSize: "clamp(36px, 10vw, 168px)",
             lineHeight: 0.95,
             letterSpacing: "-0.04em",
             textShadow: "0 0 30px rgba(255,255,255,0.08)",

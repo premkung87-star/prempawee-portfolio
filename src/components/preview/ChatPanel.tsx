@@ -107,15 +107,18 @@ export function ChatPanel({ lang }: { lang: Lang }) {
     logRef.current?.scrollTo(0, logRef.current.scrollHeight);
   }, [messages]);
 
-  useEffect(() => {
-    if (consented) inputRef.current?.focus();
-  }, [consented]);
+  // Note: NO auto-focus on consented-on-mount. Auto-focusing the chat input
+  // when the chat is embedded in the middle of a longer page (the /preview
+  // layout) causes the browser to scroll past the hero to bring the input
+  // into view. Bug found 2026-04-25 mobile audit. Focus only fires on the
+  // explicit consent click below.
 
   function onConsent() {
     try {
       localStorage.setItem(PDPA_KEY, "yes");
     } catch {}
     setConsented(true);
+    inputRef.current?.focus();
   }
 
   const isLoading = status === "submitted" || status === "streaming";
