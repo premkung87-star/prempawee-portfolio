@@ -46,7 +46,7 @@ export function Process({ lang }: { lang: Lang }) {
   return (
     <section
       ref={wrapRef}
-      className="bg-black text-white border-t border-white relative overflow-hidden"
+      className="bg-black text-white border-t border-white relative overflow-clip"
       style={{ height: `${t.process.length * 90}vh` }}
       data-screen-label="03 Process"
     >
