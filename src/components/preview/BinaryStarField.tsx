@@ -152,6 +152,14 @@ function BinaryStar({
   const [scattered, setScattered] = useState(false);
   const [tick, setTick] = useState(0);
   const [reduced, setReduced] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  // Defer randomized chars to post-mount so SSR and first client render produce
+  // identical output (deterministic checkerboard) — avoids React hydration
+  // mismatch warning. After mount the cycle takes over via `tick`.
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -174,14 +182,15 @@ function BinaryStar({
     for (let r = 0; r < MH; r++) {
       for (let c = 0; c < MW; c++) {
         if (mask[r][c]) {
-          arr.push({ r, c, ch: pickChar() });
+          const ch = mounted ? pickChar() : (r + c) % 2 === 0 ? "0" : "1";
+          arr.push({ r, c, ch });
         }
       }
     }
     return arr;
-    // tick + shape drive the recompute. mask/MW/MH are derived from shape.
+    // tick + shape + mounted drive the recompute. mask/MW/MH are derived from shape.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tick, shape]);
+  }, [tick, shape, mounted]);
 
   function onClick() {
     if (reduced) return;
