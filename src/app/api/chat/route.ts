@@ -523,8 +523,12 @@ export async function POST(req: Request) {
                 "I couldn't save that right now. Please reach Prempawee directly — prempaweet20@gmail.com",
             };
           }
-          // Fire-and-forget webhook notification
-          notifyNewLead({
+          // AUDIT_LOG §08/§19/§36 — edge runtime tears down the worker as
+          // soon as the streamed response closes; an unawaited webhook fetch
+          // is killed mid-flight. Await it here. The user is already paused
+          // on the lead-capture tool result, so the bounded ~3s tail is
+          // acceptable. notifyNewLead has its own internal timeout + try/catch.
+          await notifyNewLead({
             id: result.id,
             name: input.name,
             email: input.email,
