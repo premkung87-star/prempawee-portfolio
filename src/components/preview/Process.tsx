@@ -49,18 +49,18 @@ export function Process({ lang }: { lang: Lang }) {
       style={{ height: `${t.process.length * 90}vh` }}
       data-screen-label="03 Process"
     >
-      <div className="sticky top-0 h-dvh flex items-stretch px-[6vw]">
-        {/* left rail */}
-        <div className="w-60 border-r border-white py-8 flex flex-col gap-6">
+      <div className="sticky top-0 h-dvh flex flex-col md:flex-row items-stretch px-4 sm:px-[6vw]">
+        {/* rail — top on mobile, left on desktop */}
+        <div className="w-full md:w-60 border-b md:border-b-0 md:border-r border-white py-5 md:py-8 flex flex-col gap-3 md:gap-6">
           <div className="font-mono text-xs tracking-[0.3em] opacity-60">
             {t.process_kicker}
           </div>
-          <div className="flex flex-col gap-4">
+          <div className="flex md:flex-col gap-2 md:gap-4 overflow-x-auto md:overflow-visible">
             {t.process.map((p, i) => (
               <button
                 key={p.n}
                 onClick={() => setActive(i)}
-                className="bg-transparent border-none text-left p-0 cursor-pointer font-mono text-[13px] tracking-[0.1em] min-h-[32px]"
+                className="bg-transparent border-none text-left p-0 font-mono text-[13px] tracking-[0.1em] min-h-[32px] whitespace-nowrap shrink-0"
                 style={{
                   color: active === i ? "#fff" : "rgba(255,255,255,0.35)",
                 }}
@@ -75,29 +75,31 @@ export function Process({ lang }: { lang: Lang }) {
         </div>
 
         {/* main */}
-        <div className="flex-1 flex items-center justify-center px-[5vw] relative">
-          <div className="absolute top-6 right-6 font-mono text-[10px] tracking-[0.3em] opacity-50">
+        <div className="flex-1 flex items-center justify-center px-2 sm:px-[5vw] py-8 md:py-0 relative">
+          <div className="absolute top-3 md:top-6 right-3 md:right-6 font-mono text-[10px] tracking-[0.3em] opacity-50">
             STEP {active + 1} / {t.process.length}
           </div>
-          <div className="flex gap-14 items-center max-w-[900px]">
-            <DotMatrixNumber str={t.process[active].n} dot={10} />
-            <div className="border-l border-white pl-10 max-w-[480px]">
+          <div className="flex flex-col md:flex-row gap-8 md:gap-14 items-start md:items-center max-w-[900px] w-full">
+            <div className="shrink-0">
+              <DotMatrixNumber str={t.process[active].n} dot={10} />
+            </div>
+            <div className="md:border-l md:border-white md:pl-10 max-w-[480px]">
               <div
-                className="font-mono font-bold leading-tight mb-5"
+                className="font-mono font-bold leading-tight mb-3 md:mb-5"
                 style={{
-                  fontSize: "clamp(28px, 3.6vw, 48px)",
+                  fontSize: "clamp(24px, 3.6vw, 48px)",
                   letterSpacing: "-0.02em",
                 }}
               >
                 {t.process[active].t}
               </div>
-              <div className="font-mono text-sm leading-relaxed opacity-85 [text-wrap:pretty]">
+              <div className="font-mono text-[13px] md:text-sm leading-relaxed opacity-85 [text-wrap:pretty]">
                 {t.process[active].d}
               </div>
             </div>
           </div>
           {/* progress bar */}
-          <div className="absolute bottom-8 left-[5vw] right-[5vw] flex gap-1.5">
+          <div className="absolute bottom-4 md:bottom-8 left-2 right-2 sm:left-[5vw] sm:right-[5vw] flex gap-1.5">
             {t.process.map((_, i) => (
               <div
                 key={i}

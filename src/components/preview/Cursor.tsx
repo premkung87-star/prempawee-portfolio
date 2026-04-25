@@ -75,8 +75,19 @@ export function Cursor() {
 
     const over = (e: MouseEvent) => {
       const target = e.target as Element | null;
+      // READY tag only triggers on real form controls or elements that
+      // explicitly opt in via data-cursor="hover". Plain <a> tags and
+      // section headings/divs do NOT trigger it — they get the regular
+      // reticle, keeping the page typography readable. (Per Foreman 2026-04-25:
+      // the original "any link or button" rule made section titles like
+      // "ASK THE PORTFOLIO" feel overshadowed by the cursor's READY tag.)
+      const optedOut = target?.closest('[data-cursor="default"]');
+      if (optedOut) {
+        setHovering(false);
+        return;
+      }
       const t = target?.closest(
-        "a, button, input, textarea, [data-cursor='hover']",
+        'button, input, textarea, [data-cursor="hover"]',
       );
       setHovering(!!t);
     };

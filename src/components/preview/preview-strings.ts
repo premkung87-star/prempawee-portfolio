@@ -80,7 +80,7 @@ export const STR = {
     contact: [
       { k: "LINE", href: "https://line.me/ti/p/EeqOwz9udS" },
       { k: "EMAIL", href: "mailto:prempaweet20@gmail.com" },
-      { k: "LINKEDIN", href: "https://www.linkedin.com/in/prempawee" },
+      { k: "LINKEDIN", href: "https://www.linkedin.com/in/prempaweedevth" },
       { k: "GITHUB", href: "https://github.com/premkung87-star" },
     ],
     footer_links: [
@@ -167,7 +167,7 @@ export const STR = {
     contact: [
       { k: "LINE", href: "https://line.me/ti/p/EeqOwz9udS" },
       { k: "EMAIL", href: "mailto:prempaweet20@gmail.com" },
-      { k: "LINKEDIN", href: "https://www.linkedin.com/in/prempawee" },
+      { k: "LINKEDIN", href: "https://www.linkedin.com/in/prempaweedevth" },
       { k: "GITHUB", href: "https://github.com/premkung87-star" },
     ],
     footer_links: [

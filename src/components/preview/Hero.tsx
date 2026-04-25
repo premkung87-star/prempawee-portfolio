@@ -39,10 +39,14 @@ export function Hero({
       data-screen-label="01 Hero"
     >
       <DotField />
-      {/* top-left: logo + system meta */}
-      <div className="absolute top-6 left-6 flex gap-3.5 items-center z-10">
-        <Logo size={80} />
-        <div className="font-mono text-[11px] leading-tight opacity-85">
+      {/* top-left: logo + system meta. Logo scales down on small screens to
+          leave room for the lang toggle. Meta text hides on mobile to avoid
+          overflow with the toggle on the right. */}
+      <div className="absolute top-4 sm:top-6 left-4 sm:left-6 flex gap-2.5 sm:gap-3.5 items-center z-10">
+        <div className="scale-75 sm:scale-100 origin-top-left">
+          <Logo size={80} />
+        </div>
+        <div className="hidden sm:block font-mono text-[11px] leading-tight opacity-85">
           {"PREMPAWEE "}<span className="opacity-60">{"//"}</span>{" AI"}
           <br />
           <span className="opacity-50">{t.locale}</span>
@@ -51,7 +55,7 @@ export function Hero({
 
       {/* top-right: EN/TH toggle */}
       <div
-        className="absolute top-6 right-6 flex items-center border border-white font-mono text-xs z-10"
+        className="absolute top-4 sm:top-6 right-4 sm:right-6 flex items-center border border-white font-mono text-xs z-10"
         role="group"
         aria-label="Display language"
       >
