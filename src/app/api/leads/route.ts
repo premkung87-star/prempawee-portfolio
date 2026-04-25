@@ -110,7 +110,11 @@ export async function POST(req: Request) {
     );
   }
 
-  notifyNewLead({ id: result.id, ...parsed.data });
+  // AUDIT_LOG §36 — pattern parity with chat/route.ts edge fix. This route
+  // is nodejs (not edge), so the worker doesn't tear down the same way, but
+  // awaiting keeps the §08 invariant ("every promise visible inside the
+  // handler is awaited") consistent across all webhook-emitting routes.
+  await notifyNewLead({ id: result.id, ...parsed.data });
   logInfo("leads.captured", {
     id: result.id,
     package_interest: parsed.data.package_interest,
