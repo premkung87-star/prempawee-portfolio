@@ -2,21 +2,22 @@
 
 import { useEffect, useRef, useState } from "react";
 
-// Matrix / Terminal custom cursor.
-// Replaces the OS cursor with a 28x28 corner-bracket reticle whose center
-// glyph flickers every 90ms, drops Matrix-style character trail on movement,
-// bursts [ ] / / on click, and morphs into [ READY ▮ ] tag on hover over
-// interactive elements. mix-blend-mode: difference keeps it visible on both
-// black and white surfaces. Pure B&W, JetBrains Mono only.
+// Matrix / Terminal custom cursor — simplified per Foreman 2026-04-25 21:00 BKK.
+// The original [ READY ▮ ] hover tag was floating next to the reticle and
+// visually overlapping section titles like "ASK THE PORTFOLIO", making them
+// feel overshadowed. Removed entirely. The reticle now subtly scales up on
+// hover (1.0 → 1.25) for the same "I'm interactive" affordance without the
+// text label dominating the page.
 //
-// Disabled on touch devices via `(hover: hover)` media query — component
-// returns null and the OS cursor is preserved.
+// Behavior summary:
+// - Default: 28x28 corner-bracket reticle + flickering center glyph + trail.
+// - Hover (button/input/textarea/[data-cursor='hover']): reticle scales 1.25x.
+// - Click: bursts [, ], /, / outward (unchanged).
+// - Touch: returns null, OS cursor preserved.
+// - prefers-reduced-motion: skips trail / ripple / flicker; static reticle.
 //
-// prefers-reduced-motion: skips the trail / click ripple / glyph flicker
-// (per design handoff README §Accessibility recommendation). The static
-// reticle + READY tag remain.
-//
-// Spec source: design_handoff_matrix_cursor/README.md (high-fidelity).
+// mix-blend-mode: difference keeps the cursor visible on both polarities.
+// Spec source: design_handoff_matrix_cursor/README.md.
 
 const CHARSET =
   "01ABCDEF/{}[]<>=*+#$%01アカサタナハマヤラワ".split("");
@@ -152,7 +153,8 @@ export function Cursor() {
           transition: "transform 40ms linear",
         }}
       >
-        {/* default state: reticle + flickering glyph */}
+        {/* Reticle + flickering glyph. Scales up subtly on hover for an
+            "I'm interactive" affordance — replaces the previous READY tag. */}
         <div
           style={{
             position: "absolute",
@@ -160,8 +162,8 @@ export function Cursor() {
             top: -14,
             width: 28,
             height: 28,
-            opacity: hovering ? 0 : 1,
-            transition: "opacity 120ms",
+            transform: hovering ? "scale(1.25)" : "scale(1)",
+            transition: "transform 140ms cubic-bezier(0.2,0.7,0.2,1)",
           }}
         >
           <svg
@@ -200,39 +202,6 @@ export function Cursor() {
           >
             {glyph}
           </span>
-        </div>
-
-        {/* hover state: bracketed [ READY ▮ ] tag */}
-        <div
-          style={{
-            position: "absolute",
-            left: 12,
-            top: -10,
-            opacity: hovering ? 1 : 0,
-            transition: "opacity 120ms",
-            font: "700 11px/1 'JetBrains Mono', monospace",
-            color: "#fff",
-            letterSpacing: "0.18em",
-            whiteSpace: "nowrap",
-            padding: "5px 8px",
-            border: "1px solid #fff",
-            background: "#000",
-            textShadow: "0 0 6px rgba(255,255,255,0.5)",
-          }}
-        >
-          <span style={{ opacity: 0.6 }}>[</span> READY{" "}
-          <span
-            className="cursor-blink-block"
-            style={{
-              display: "inline-block",
-              width: 7,
-              height: 11,
-              background: "#fff",
-              verticalAlign: "-1px",
-              marginLeft: 2,
-            }}
-          />
-          <span style={{ opacity: 0.6, marginLeft: 4 }}>]</span>
         </div>
       </div>
     </>
