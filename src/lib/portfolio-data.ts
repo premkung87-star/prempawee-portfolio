@@ -588,7 +588,7 @@ export const NWL_FEATURES = [
 
 export const CONTACT = {
   email: "prempaweet20@gmail.com",
-  linkedin: "https://www.linkedin.com/in/prempawee",
+  linkedin: "https://www.linkedin.com/in/prempaweedevth",
   line: "Prempawee (Personal LINE)",
   // Direct LINE chat URL — Thai buyers prefer LINE over email, and
   // opening a 1:1 chat with the actual developer (vs an OA) converts

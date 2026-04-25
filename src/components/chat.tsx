@@ -550,7 +550,7 @@ export function Chat() {
                 prempaweet20@gmail.com
               </a>
               <a
-                href="https://www.linkedin.com/in/prempawee"
+                href="https://www.linkedin.com/in/prempaweedevth"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-white underline underline-offset-2 decoration-white/30"

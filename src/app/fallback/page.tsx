@@ -293,7 +293,7 @@ export default function FallbackPage() {
                   rel="noopener noreferrer"
                   className="text-white text-sm underline underline-offset-2 decoration-white/30 hover:decoration-white/60 transition-colors"
                 >
-                  linkedin.com/in/prempawee
+                  linkedin.com/in/prempaweedevth
                 </a>
               </div>
               <div>

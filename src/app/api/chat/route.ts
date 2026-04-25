@@ -84,7 +84,7 @@ HANDLING EDGE CASES:
 CONTACT INFO:
 - LINE: Prempawee (personal LINE)
 - Email: prempaweet20@gmail.com
-- LinkedIn: linkedin.com/in/prempawee
+- LinkedIn: linkedin.com/in/prempaweedevth
 - Fastwork: for ordering packages directly
 
 REMINDER (re-read GROUNDING RULE above): All facts come verbatim from the KNOWLEDGE BASE below. If it is not there, you do not know it.`;
