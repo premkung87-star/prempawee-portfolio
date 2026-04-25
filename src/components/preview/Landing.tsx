@@ -50,7 +50,7 @@ export function Landing() {
   }, [lang]);
 
   return (
-    <div className="bg-black text-white font-mono">
+    <div className="bg-black text-white font-mono cursor-hidden">
       <MatrixBoot />
       <Cursor />
       <Hero lang={lang} setLang={setLangState} />
