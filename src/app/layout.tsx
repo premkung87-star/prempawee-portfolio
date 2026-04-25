@@ -190,7 +190,7 @@ const jsonLd = {
           name: "What makes Prempawee's chatbots different from other chatbot services?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "Prempawee's chatbots use Claude AI for natural Thai-language understanding rather than keyword matching. Built on production-grade infrastructure (Vercel 99.99% uptime, Supabase). Backed by a Mass Communication degree from Chiang Mai University — both the technical side and the communication side are handled.",
+            text: "Prempawee's chatbots use Claude AI for natural Thai-language understanding rather than keyword matching. Built on Vercel Edge Network with Supabase Postgres for the RAG knowledge base. Backed by a Mass Communication degree from Chiang Mai University — both the technical side and the communication side are handled.",
           },
         },
         {
