@@ -1,12 +1,12 @@
 # SSS Infrastructure Status
 
-Snapshot after Path-A full build-out (all 10 items). Refresh when axes move. Last refreshed 2026-04-25 (Session 4: axis #2 verified live + reconciled).
+Snapshot after Path-A full build-out (all 10 items). Refresh when axes move. Last refreshed 2026-04-25 (Session 5: Saturday-launch sweep — 4 PRs merged, prod E2E 6/6 green, /case-studies/verdex indexable with real WebP assets, personal-LINE CTA wired).
 
 ## The 10 axes
 
 | # | Item | Status | Verify |
 |---|---|---|---|
-| 1 | **Sentry + 3 alerts** | 🟡 Transport live, alert rules pending | DSN configured (§22), SDK loads under Turbopack (§23–§24), CSP unblocked (§25), 52 spans captured in preview env. Alert rules config deferred to Session 4. |
+| 1 | **Sentry + 3 alerts** | ✅ 2/3 alerts live, p95 rule deferred | DSN configured (§22), SDK loads under Turbopack (§23–§24), CSP unblocked (§25). Session 5 (2026-04-25): Alert 1 (error rate > 1%) and Alert 3 (RAG fetch failure) created via Sentry UI as Issue Alerts. Alert 2 (p95 latency on /api/chat) deferred — portfolio traffic too low for p95 to be meaningful signal pre-launch; revisit after ~200+ sessions accumulate. |
 | 2 | **pgvector semantic + hybrid rerank** | ✅ Live (verified 2026-04-25) | Migration `002_semantic.sql` applied, `match_knowledge_hybrid` RPC callable, all 22 `knowledge_base` rows have OpenAI `text-embedding-3-small` (1536-dim) embeddings. Hybrid retrieval exercised on every `/api/chat` request — server log shows `semantic.{provider, model, top_ids, top_scores}` per turn. Cross-lingual TH↔EN retrieval verified (5 direct RPC probes + chat-route runtime probe). |
 | 3 | **Ragas-style eval in CI** | ✅ Live | `npm run eval:rag` — 10 probes + LLM-as-judge faithfulness/relevancy. CI job `ragas-eval` blocks merge if threshold (default 0.7) not met. |
 | 4 | **1h prompt caching** | ✅ Live | `cacheControl: { type: 'ephemeral', ttl: '1h' }` on system prompt. `/admin/finops` shows `cache_read_tokens` — aim for >80% hit rate once warm. |
@@ -141,6 +141,25 @@ Still ⚠️ (user-gated) after this build:
 | Item | Completion note | Completed in |
 |---|---|---|
 | Semantic RAG axis #2 | Doc-reality drift discovered: activation actually shipped Session 2 (per AUDIT_LOG line 393) but SSS_STATUS row never flipped. Verified live 2026-04-25 via 5 direct RPC probes (3 EN + 2 TH) + chat-route runtime probe. All 22/22 rows embedded; `top_ids` consistent across direct-RPC vs chat-route paths. See AUDIT_LOG §32. | Session 4 |
+
+### Completed (Session 5, 2026-04-25 — Saturday-launch sweep)
+
+8 PRs merged in a single working day to close the bounded weakness list and ship the upgrade phase, all under the Sunday 2026-04-26 12:00 BKK hard cap. See AUDIT_LOG §33.
+
+| Item | Completion note | Completed in |
+|---|---|---|
+| Sentry alerts (axis #1) | Alerts 1 (error rate >1%) + 3 (RAG fetch failure) created via Sentry UI. Alert 2 (p95 latency on /api/chat) deferred — portfolio traffic too low for p95 to be meaningful pre-launch; revisit after ~200+ sessions. Axis flipped 🟡 → ✅ (2/3 alerts live, p95 deferred). | Session 5 |
+| GROUNDING RULE on chatbot | `src/app/api/chat/route.ts` `baseSystemPrompt` now opens with explicit anti-fabrication block. Forbids invented uptime numbers, iteration counts, package names, prices outside the 3 official ones. Closes RAG-eval `avg_faithfulness` 0.495 measurement defect path (PR #18). | Session 5 |
+| Sentry §24 follow-ups closed | `src/instrumentation-client.ts` adds `onRouterTransitionStart` for Turbopack nav traces. E2E CSP-header test env-scoped to skip on localhost dev (PR #19). | Session 5 |
+| CI middleware/proxy guard | New first step in `.github/workflows/ci.yml` `check` job: hard-fails any commit where both `src/middleware.ts` AND `src/proxy.ts` exist. Prevents §18 ping-pong recurrence (PR #20). | Session 5 |
+| VerdeX Farm case study | New route `/case-studies/verdex` with stub-first pattern. Conditional noindex via `hasStubbedScreenshots`. Real WebP assets landed in PR #24 (5 images, ~210 KB total, dimensions measured) — page now indexable, sitemap updated (PRs #21, #24). | Session 5 |
+| How-I-work 4-step ribbon | New section above chat on first load. Auto-hides once messages start. Bilingual EN/TH. Content mirrors KB row #18 verbatim — no hallucination surface. Adds visible CTA (PR #22). | Session 5 |
+| Lighthouse-grade tap targets | EN/TH toggles, PDPA "I understand", suggested prompt chips all bumped to clear 24×24 mobile tap-target audit. Lighthouse mobile a11y holds at 98 (PR #23). | Session 5 |
+| Personal LINE CTA | `CONTACT.contactUrl` swapped from mailto fallback to direct LINE URL. Both anchors get `target="_blank" rel="noopener noreferrer"`. Mailto preserved as `mailtoFallback`. Captures Thai-buyer intake at zero friction (PR #24). | Session 5 |
+| KB +8 buyer-FAQ rows | NDA / payment / maintenance / equity / hours / Day-1 deliverables / bilingual handover / timeline drift answers added to `knowledge_base`. All 7 facts decided by Foreman, no improvisation. Plus 1-row drift fix between `supabase-seed.sql` and `scripts/refresh-knowledge-base.mjs`. KB now 30 rows, all embedded. RAG eval 10/10 from CI runner-IP (PR #27). | Session 5 |
+| Launch announcement drafts | 4 ready-to-publish drafts at `docs/launch/`: LinkedIn bilingual, LINE Timeline TH, X EN thread (5 tweets), Fastwork bullet-update prompt. Same GROUNDING RULE applied — every numeric/proper-noun claim KB-traceable (PR #26). | Session 5 |
+| Post-launch 48h runbook | New `docs/POST_LAUNCH_RUNBOOK.md` with pre-launch checklist, hourly-cadence triggers for first 4h, daily check-ins through Day 7, rollback procedure with PR #21–#24 SHAs verbatim (PR #25). | Session 5 |
+| Lighthouse baseline (mobile / desktop) | 94/98/96/100 mobile · 96/98/96/100 desktop. CWV: CLS 0.005 / 0.001, LCP 1.7s / 0.8s. Diagnostics flagged (defer post-launch): Reduce unused JS 198 KiB, forced reflow on chat scroll, legacy JS 15 KiB, Document main landmark (fixed in this PR). | Session 5 |
 
 Once all those are through, every axis of the SSS ranking reaches its
 maximum. The code infrastructure — the part under my control — is already
