@@ -6,6 +6,14 @@ export type Lang = "en" | "th";
 
 export const STR = {
   en: {
+    nav_work: "WORK",
+    nav_pricing: "PRICING",
+    nav_cases: "CASES",
+    nav_contact: "CONTACT",
+    nav_open_menu: "Open menu",
+    nav_close_menu: "Close menu",
+    nav_skip: "Skip to content",
+    suggest_pricing: "How much for a chatbot?",
     headline: "talk to my portfolio",
     subhead:
       "the AI knows every project, price, and timeline. ask anything.",
@@ -114,6 +122,14 @@ export const STR = {
       "Welcome. I'm Prempawee's portfolio AI. He's a Solo AI Developer in Chiang Mai shipping production systems for Thai businesses — LINE chatbots, admin dashboards, IoT, AI agents. All Claude-powered, all deployed, all live.",
   },
   th: {
+    nav_work: "ผลงาน",
+    nav_pricing: "ราคา",
+    nav_cases: "เคสศึกษา",
+    nav_contact: "ติดต่อ",
+    nav_open_menu: "เปิดเมนู",
+    nav_close_menu: "ปิดเมนู",
+    nav_skip: "ข้ามไปที่เนื้อหา",
+    suggest_pricing: "chatbot ราคาเท่าไหร่?",
     headline: "คุยกับ portfolio ผม",
     subhead: "AI รู้ทุกโปรเจกต์ ราคา และ timeline. ถามอะไรก็ได้.",
     hero_kicker: "PORTFOLIO_AI :: v.2026.04 :: sonnet · edge · RAG",

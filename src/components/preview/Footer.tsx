@@ -16,7 +16,8 @@ export function Footer({ lang }: { lang: Lang }) {
   const t = STR[lang];
   return (
     <footer
-      className="relative overflow-hidden bg-black text-white border-t border-white px-4 sm:px-[6vw] pt-8 sm:pt-10 pb-7 grid gap-6 sm:gap-8 items-start grid-cols-1 sm:[grid-template-columns:auto_1fr_auto]"
+      id="contact"
+      className="relative overflow-hidden bg-black text-white border-t border-white px-4 sm:px-[6vw] pt-8 sm:pt-10 pb-7 grid gap-6 sm:gap-8 items-start grid-cols-1 sm:[grid-template-columns:auto_1fr_auto] scroll-mt-[60px]"
       data-screen-label="05 Footer"
     >
       <BinaryStarField

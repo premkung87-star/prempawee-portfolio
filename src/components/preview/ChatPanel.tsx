@@ -88,9 +88,9 @@ export function ChatPanel({
   tall = false,
 }: {
   lang: Lang;
-  // When true, the panel renders 640px tall with a soft white spotlight
-  // shadow — used in the redesigned Hero where the chat is the centerpiece.
-  // Defaults to the original 600px / no shadow for the legacy ChatSection.
+  // Hero "centerpiece" mode: 520px on mobile, 700px on lg+. Adds a soft
+  // white spotlight ring + 1px outline at +6px offset. Defaults to a
+  // 600px panel with no decoration (legacy ChatSection layout).
   tall?: boolean;
 }) {
   const t = STR[lang];
@@ -134,6 +134,25 @@ export function ChatPanel({
   const userMessageCount = messages.filter((m) => m.role === "user").length;
   const isLimitReached = userMessageCount >= MAX_MESSAGES;
 
+  // Listen for `preview:chat-prompt` events so other parts of the page
+  // (e.g., NavBar's PRICING button) can drive the chat. Cheaper than
+  // shared state. Guard against double-fire by checking loading + cap
+  // status at handler time, mirroring sendSuggestion's contract.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!consented) return;
+    const onPrompt = (e: Event) => {
+      const ce = e as CustomEvent<{ text?: string }>;
+      const text = ce.detail?.text?.trim();
+      if (!text) return;
+      if (isLoading || isLimitReached) return;
+      sendMessage({ text });
+    };
+    window.addEventListener("preview:chat-prompt", onPrompt);
+    return () =>
+      window.removeEventListener("preview:chat-prompt", onPrompt);
+  }, [consented, isLoading, isLimitReached, sendMessage]);
+
   function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!input.trim() || isLoading || isLimitReached) return;
@@ -164,19 +183,45 @@ export function ChatPanel({
     );
   }
 
+  // Height: tall = chat-dominant Hero (responsive: 520 mobile, 700 lg+).
+  // legacy = standalone ChatSection at original 600. The spotlight ring +
+  // outline are decorative for the desktop centerpiece — applied on every
+  // breakpoint when tall is true. The 6px outline-offset stays inside the
+  // hero's px-4 mobile padding, so it never clips the viewport.
+  const heightClass = tall
+    ? "h-[520px] lg:h-[700px]"
+    : "h-[600px]";
+
   return (
     <div
-      className="border border-white bg-black text-white flex flex-col"
-      style={{
-        height: tall ? 640 : 600,
-        boxShadow: tall
-          ? "0 0 0 1px rgba(255,255,255,0.4), 0 0 60px rgba(255,255,255,0.08)"
-          : undefined,
-      }}
+      className={`border border-white bg-black text-white flex flex-col ${heightClass}`}
+      style={
+        tall
+          ? {
+              boxShadow:
+                "0 0 0 1px rgba(255,255,255,0.4), 0 0 60px rgba(255,255,255,0.08)",
+              outline: "1px solid rgba(255,255,255,0.18)",
+              outlineOffset: 6,
+            }
+          : undefined
+      }
     >
-      <div className="border-b border-white px-3.5 py-2.5 flex justify-between items-center font-mono text-[11px] tracking-[0.18em]">
-        <span>:: CHAT_v2 · sonnet · edge</span>
-        <span className="opacity-60">
+      <div className="border-b border-white px-3.5 py-2.5 flex justify-between items-center gap-3 font-mono text-[11px] tracking-[0.18em]">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <span
+            className="inline-flex items-center gap-1.5 shrink-0"
+            aria-label="Online"
+          >
+            <span
+              aria-hidden="true"
+              className="inline-block w-1.5 h-1.5 bg-white rounded-full status-pulse"
+            />
+            <span className="tracking-[0.22em]">ONLINE</span>
+          </span>
+          <span className="opacity-50 shrink-0" aria-hidden="true">·</span>
+          <span className="truncate">:: CHAT_v2 · sonnet · edge</span>
+        </div>
+        <span className="opacity-60 shrink-0">
           {userMessageCount}/{MAX_MESSAGES} ·{" "}
           {isLimitReached ? "cap" : "ok"}
         </span>

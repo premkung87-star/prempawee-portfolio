@@ -6,6 +6,7 @@ import { FeaturedCase } from "./FeaturedCase";
 import { Footer } from "./Footer";
 import { Hero } from "./Hero";
 import { Marquee } from "./Marquee";
+import { NavBar } from "./NavBar";
 import { Process } from "./Process";
 import { ProofStrip } from "./ProofStrip";
 import { WhatIBuild } from "./WhatIBuild";
@@ -17,6 +18,14 @@ import type { Lang } from "./preview-strings";
 // Mounted on /preview only — / continues to render the existing chat.tsx
 // design until cutover.
 //
+// v3 senior pass (2026-04-25):
+//   - NavBar mounted at the top — sticky, single source of truth for the
+//     EN/TH toggle (was duplicated in Hero), plus practical WORK / PRICING /
+//     CASES / CONTACT buttons. PRICING dispatches `preview:chat-prompt` so
+//     the chat answers (AI-native nav).
+//   - Sections wrapped in <main id="main"> so the NavBar skip-link works.
+//   - Hero no longer needs `setLang` — NavBar owns the toggle now.
+//
 // v2 senior pass (2026-04-25):
 //   - MatrixBoot removed (decoration trim — chat is now the centerpiece, no
 //     intro animation needed before the user can act).
@@ -25,8 +34,6 @@ import type { Lang } from "./preview-strings";
 //   - FeaturedCase added between the second Marquee and Process — links to
 //     the real /case-studies/verdex (not the design's fabricated NWL CLUB
 //     metrics).
-//   - MatrixBoot.tsx and ChatSection.tsx files left in place; this PR only
-//     stops importing them. Cleanup is a follow-up.
 
 export function Landing() {
   const [lang, setLangState] = useState<Lang>("en");
@@ -63,13 +70,16 @@ export function Landing() {
   return (
     <div className="bg-black text-white font-mono cursor-hidden">
       <Cursor />
-      <Hero lang={lang} setLang={setLangState} />
-      <Marquee />
-      <WhatIBuild lang={lang} />
-      <ProofStrip lang={lang} />
-      <Marquee reverse />
-      <FeaturedCase lang={lang} />
-      <Process lang={lang} />
+      <NavBar lang={lang} setLang={setLangState} />
+      <main id="main">
+        <Hero lang={lang} />
+        <Marquee />
+        <WhatIBuild lang={lang} />
+        <ProofStrip lang={lang} />
+        <Marquee reverse />
+        <FeaturedCase lang={lang} />
+        <Process lang={lang} />
+      </main>
       <Footer lang={lang} />
     </div>
   );

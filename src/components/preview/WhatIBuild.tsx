@@ -25,7 +25,8 @@ export function WhatIBuild({ lang }: { lang: Lang }) {
 
   return (
     <section
-      className="relative bg-black text-white border-t border-white pt-8 overflow-hidden"
+      id="work"
+      className="relative bg-black text-white border-t border-white pt-8 overflow-hidden scroll-mt-[60px]"
       data-screen-label="02 What I Build"
     >
       <BinaryStarField

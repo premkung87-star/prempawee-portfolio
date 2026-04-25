@@ -147,6 +147,7 @@ export function ProofStrip({ lang }: { lang: Lang }) {
   const t = STR[lang];
   return (
     <section
+      id="proof"
       className="relative bg-black text-white border-t border-white px-4 sm:px-[6vw] pt-14 pb-16 overflow-hidden"
       data-screen-label="02b Proof"
     >
