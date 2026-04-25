@@ -196,9 +196,9 @@ export const PROJECTS: readonly Project[] = [
             en: "Public landing at verdex-web.verdexfarm.workers.dev — brand-first narrative for the smart farm concept.",
             th: "Landing สาธารณะที่ verdex-web.verdexfarm.workers.dev — เล่า brand smart farm concept เป็นหลัก",
           },
-          stubbed: true,
-          width: 2310,
-          height: 1970,
+          stubbed: false,
+          width: 1600,
+          height: 888,
         },
         {
           filename: "02-blog.webp",
@@ -210,9 +210,9 @@ export const PROJECTS: readonly Project[] = [
             en: "Blog surface for project updates + AI agriculture content.",
             th: "Blog สำหรับ project update + เนื้อหา AI agriculture",
           },
-          stubbed: true,
-          width: 2310,
-          height: 1970,
+          stubbed: false,
+          width: 1600,
+          height: 890,
         },
         {
           filename: "03-command-center.webp",
@@ -224,9 +224,9 @@ export const PROJECTS: readonly Project[] = [
             en: "Owner-facing Command Center — real-time farm status, orders, CRM, operations. The brain alongside the LINE bot.",
             th: "Command Center สำหรับเจ้าของ — สถานะฟาร์มแบบสด, orders, CRM, operations สมองที่ทำงานร่วมกับ LINE bot",
           },
-          stubbed: true,
-          width: 2310,
-          height: 1970,
+          stubbed: false,
+          width: 1600,
+          height: 891,
         },
         {
           filename: "04-morning-report.webp",
@@ -238,9 +238,9 @@ export const PROJECTS: readonly Project[] = [
             en: "Automated 07:00 ICT Morning Report — live sensor snapshot + open orders, posted to owner's LINE thread.",
             th: "Morning Report 07:00 ICT อัตโนมัติ — sensor snapshot สด + order ที่รอจัดส่ง post ไป LINE thread เจ้าของ",
           },
-          stubbed: true,
-          width: 1170,
-          height: 2532,
+          stubbed: false,
+          width: 600,
+          height: 1305,
         },
         {
           filename: "05-weekly-pulse.webp",
@@ -252,9 +252,9 @@ export const PROJECTS: readonly Project[] = [
             en: "Weekly Pulse Report — Claude Opus analyzes 7 days of sensor + business data. Example: Sensor Stability 44/100, water 22.9°C (33% in range), air 27.3°C (67% in range), humidity 60.4%, revenue 360 THB, 3 orders, 5.5 kg harvested.",
             th: "Weekly Pulse Report — Claude Opus วิเคราะห์ข้อมูล 7 วันของ sensor และธุรกิจ ตัวอย่าง: Sensor Stability 44/100, น้ำ 22.9°C (ในช่วงปกติ 33%), อากาศ 27.3°C (ในช่วงปกติ 67%), ความชื้น 60.4%, รายได้ 360 บาท, 3 orders, 5.5 กก. ที่เก็บเกี่ยว",
           },
-          stubbed: true,
-          width: 1170,
-          height: 2532,
+          stubbed: false,
+          width: 600,
+          height: 1305,
         },
       ],
       security: [
@@ -590,10 +590,12 @@ export const CONTACT = {
   email: "prempaweet20@gmail.com",
   linkedin: "https://www.linkedin.com/in/prempawee",
   line: "Prempawee (Personal LINE)",
-  // Direct LINE chat URL — Thai buyers prefer LINE over email. If the
-  // personal LINE is addable, set to `https://line.me/ti/p/<lineId>`.
-  // Until then, mailto: is the reliable fallback.
-  contactUrl:
+  // Direct LINE chat URL — Thai buyers prefer LINE over email, and
+  // opening a 1:1 chat with the actual developer (vs an OA) converts
+  // better for project intake. Email remains available as a secondary
+  // path via the LeadCaptureCard / error-fallback surfaces.
+  contactUrl: "https://line.me/ti/p/EeqOwz9udS",
+  mailtoFallback:
     "mailto:prempaweet20@gmail.com?subject=Project%20inquiry&body=Hi%20Prempawee%2C%0A%0AI'm%20interested%20in%20starting%20a%20project%20with%20you.%0A%0ABusiness%20type%3A%0AScope%2FRequirements%3A%0APreferred%20timeline%3A%0A%0AThanks%2C%0A",
   fastwork: "https://fastwork.co",
   responseTime: "2-4 hours during working hours",
