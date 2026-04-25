@@ -4,50 +4,77 @@ import { useEffect, useState } from "react";
 import { BinaryStarField } from "./BinaryStarField";
 import { ChatPanel } from "./ChatPanel";
 import { DotField } from "./DotField";
-import { Logo } from "./Logo";
 import { STR, type Lang } from "./preview-strings";
 
-// Hero — 2-column on lg+, stacked on mobile. Headline + 3-stat strip on the
-// LEFT, the live ChatPanel (tall) on the RIGHT. The chat IS the centerpiece
-// per Foreman's senior pass — Portfolio AI is the differentiator, and the
-// first thing visitors should be able to *do*, not just read.
+// Hero — chat-dominant on lg+, chat-above-the-fold on mobile.
+//
+// v3 changes (2026-04-25):
+//   - Top bar removed entirely. NavBar now owns logo/meta + EN/TH toggle.
+//     Hero starts at the kicker, no duplicated chrome.
+//   - Desktop grid weight: 0.85fr (text) / 1.15fr (chat). Chat is the
+//     centerpiece — text takes less width, chat takes more.
+//   - Headline shrinks slightly: clamp(32px, 6.2vw, 100px) — chat carries
+//     the typographic weight now.
+//   - Chat tall height bumped to 700 (was 640); a subtle outline-offset
+//     ring extends the existing spotlight without piling on shadows.
+//   - Mobile reorder: kicker → compact headline → CHAT (full width, ~520
+//     tall) → subhead → 3-stat strip → terminal hint. Chat lands above the
+//     fold on most phones; readable copy follows it.
 //
 // Grounding (CLAUDE.md):
 //   - "8+ live projects" traces to portfolio-data.ts (3 projects across 8+
 //     surfaces; conservative count).
-//   - "< 400ms" is the same TTFB target documented in the existing case
-//     study (this-portfolio metrics).
+//   - "< 400ms" matches the TTFB target documented in the case study.
 //   - "0 hallucinations" matches the chatbot's RAG grounding contract.
 //
-// The blinking `>` cursor + ONLINE date are computed client-side to avoid
-// SSR/CSR hydration mismatches (same pattern as the original Hero).
+// The blinking `>` cursor is computed client-side to avoid SSR/CSR
+// hydration mismatches (same pattern as the original Hero).
 
-export function Hero({
-  lang,
-  setLang,
-}: {
-  lang: Lang;
-  setLang: (l: Lang) => void;
-}) {
+export function Hero({ lang }: { lang: Lang }) {
   const [blink, setBlink] = useState(true);
-  const [today, setToday] = useState("");
 
   useEffect(() => {
     const i = setInterval(() => setBlink((b) => !b), 530);
     return () => clearInterval(i);
   }, []);
 
-  // Date is computed client-side to avoid SSR/CSR mismatch
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- client-only date hydration
-    setToday(new Date().toISOString().slice(0, 10));
-  }, []);
-
   const t = STR[lang];
+
+  // Single markup tree to keep ONE ChatPanel mounted (mounting two would
+  // double-fire the `preview:chat-prompt` listener and double-install the
+  // session-id fetch override). On mobile we use flex column with explicit
+  // `order-*` so chat sits between the headline and the subhead. On lg+
+  // the layout switches to a 2-col grid where the chat takes the right
+  // column and the rest stack in the left.
+
+  const headline = (
+    <h1
+      className="font-mono font-bold m-0"
+      style={{
+        // Mobile clamp; desktop overrides via inline style (clamp itself
+        // covers the lg+ case at the upper bound). Single rule reads cleanly.
+        fontSize: "clamp(28px, 6.2vw, 100px)",
+        lineHeight: 0.94,
+        letterSpacing: "-0.04em",
+        textShadow: "0 0 30px rgba(255,255,255,0.08)",
+      }}
+    >
+      <span
+        style={{
+          opacity: blink ? 1 : 0.25,
+          transition: "opacity 60ms",
+        }}
+      >
+        &gt;
+      </span>{" "}
+      {t.headline}
+    </h1>
+  );
 
   return (
     <section
-      className="relative min-h-dvh bg-black text-white overflow-hidden pb-16"
+      id="hero"
+      className="relative min-h-dvh bg-black text-white overflow-hidden pb-16 scroll-mt-[60px]"
       data-screen-label="01 Hero"
     >
       <DotField />
@@ -76,76 +103,34 @@ export function Hero({
         ]}
       />
 
-      {/* top bar: logo + meta on left, EN/TH toggle on right */}
-      <div className="relative z-[2] flex justify-between items-center gap-3 px-4 sm:px-[6vw] pt-5 sm:pt-6">
-        <div className="flex gap-2.5 sm:gap-3.5 items-center">
-          <div className="scale-75 sm:scale-100 origin-top-left">
-            <Logo size={64} />
-          </div>
-          <div className="hidden sm:block font-mono text-[11px] leading-tight opacity-85">
-            {"PREMPAWEE "}
-            <span className="opacity-60">{"//"}</span>
-            {" AI"}
-            <br />
-            <span className="opacity-50">{t.locale}</span>
-          </div>
-        </div>
-        <div
-          className="flex items-center border border-white font-mono text-xs"
-          role="group"
-          aria-label="Display language"
-        >
-          {(["en", "th"] as const).map((l) => (
-            <button
-              key={l}
-              onClick={() => setLang(l)}
-              aria-pressed={lang === l}
-              className="border-none cursor-pointer tracking-[0.1em] min-h-[32px] min-w-[44px] px-3.5 py-2"
-              style={{
-                background: lang === l ? "#fff" : "transparent",
-                color: lang === l ? "#000" : "#fff",
-              }}
-            >
-              {l.toUpperCase()}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* main grid — headline LEFT, chat RIGHT */}
-      <div className="relative z-[2] grid grid-cols-1 lg:grid-cols-[1fr_1.05fr] gap-10 lg:gap-14 items-start px-4 sm:px-[6vw] pt-8 sm:pt-12">
-        {/* LEFT — headline + stats */}
-        <div>
-          <div className="font-mono text-[10px] sm:text-[11px] tracking-[0.3em] opacity-60 mb-5 sm:mb-6 [text-wrap:pretty]">
+      {/*
+        Mobile (< lg): flex column with order utilities — kicker, headline,
+        CHAT, subhead, stats, hint. Chat above the fold on most phones.
+        Desktop (lg+): 2-col grid; text-stack-top + text-stack-bottom in
+        left col, chat spans the right col.
+      */}
+      <div
+        className="relative z-[2] flex flex-col lg:grid lg:grid-cols-[0.85fr_1.15fr] lg:grid-rows-[auto_auto] gap-7 lg:gap-x-14 lg:gap-y-7 px-4 sm:px-[6vw] lg:px-[6vw] pt-7 lg:pt-12 lg:items-start"
+      >
+        {/* TOP-LEFT (lg+) / order-1 (mobile) — kicker + headline */}
+        <div className="order-1 lg:col-start-1 lg:row-start-1 flex flex-col gap-5 sm:gap-6">
+          <div className="font-mono text-[10px] sm:text-[11px] tracking-[0.3em] opacity-60 [text-wrap:pretty]">
             {t.hero_kicker}
           </div>
-          <h1
-            className="font-mono font-bold m-0"
-            style={{
-              fontSize: "clamp(36px, 7vw, 120px)",
-              lineHeight: 0.92,
-              letterSpacing: "-0.04em",
-              textShadow: "0 0 30px rgba(255,255,255,0.08)",
-            }}
-          >
-            <span
-              style={{
-                opacity: blink ? 1 : 0.25,
-                transition: "opacity 60ms",
-              }}
-            >
-              &gt;
-            </span>{" "}
-            {t.headline}
-          </h1>
-          <div
-            className="mt-6 sm:mt-7 font-mono text-sm leading-relaxed opacity-85 max-w-[480px] [text-wrap:pretty]"
-          >
+          {headline}
+        </div>
+
+        {/* RIGHT col (lg+) / order-2 (mobile) — CHAT (centerpiece) */}
+        <div className="order-2 lg:col-start-2 lg:row-start-1 lg:row-span-2 relative">
+          <ChatPanel lang={lang} tall />
+        </div>
+
+        {/* BOTTOM-LEFT (lg+) / order-3 (mobile) — subhead + stats + hint */}
+        <div className="order-3 lg:col-start-1 lg:row-start-2 flex flex-col gap-7 sm:gap-9 lg:gap-7">
+          <div className="font-mono text-sm leading-relaxed opacity-85 max-w-[480px] [text-wrap:pretty]">
             {t.subhead}
           </div>
-
-          {/* 3-stat strip */}
-          <div className="mt-8 sm:mt-10 grid grid-cols-3 border border-white max-w-[520px]">
+          <div className="grid grid-cols-3 border border-white max-w-[520px]">
             {[
               [t.stat_live_value, t.stat_live_label],
               [t.stat_ttfb_value, t.stat_ttfb_label],
@@ -173,18 +158,9 @@ export function Hero({
               </div>
             ))}
           </div>
-
-          <div className="mt-6 sm:mt-7 font-mono text-[11px] tracking-[0.3em] opacity-55">
+          <div className="font-mono text-[11px] tracking-[0.3em] opacity-55">
             {t.hero_try_terminal}
           </div>
-        </div>
-
-        {/* RIGHT — chat (the centerpiece) */}
-        <div className="relative">
-          <div className="absolute -top-5 right-0 font-mono text-[10px] tracking-[0.3em] opacity-60 whitespace-nowrap">
-            ◉ {t.hero_online} · {today || "----------"}
-          </div>
-          <ChatPanel lang={lang} tall />
         </div>
       </div>
 

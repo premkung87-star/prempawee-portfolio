@@ -18,6 +18,7 @@ export function FeaturedCase({ lang }: { lang: Lang }) {
   const t = STR[lang];
   return (
     <section
+      id="case"
       className="relative bg-black text-white border-t border-white pt-24 pb-28 sm:pt-28 sm:pb-32 overflow-hidden"
       data-screen-label="03 Featured Case"
     >
