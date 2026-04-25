@@ -1,0 +1,182 @@
+// Preview-route bilingual strings. Every numeric / proper-noun claim must
+// trace verbatim to portfolio-data.ts, supabase-seed.sql, or chat/route.ts.
+// Same GROUNDING RULE as the chatbot — applies to marketing copy too.
+
+export type Lang = "en" | "th";
+
+export const STR = {
+  en: {
+    headline: "talk to my portfolio",
+    subhead: "solo · chiang mai · production-grade · ai-native",
+    statusLabel: "STATUS · ONLINE",
+    scroll: "SCROLL",
+    locale: "v.2026.04 · CHIANG MAI · TH",
+    build_kicker: "[01] WHAT I BUILD",
+    build: [
+      {
+        k: "CHATBOTS",
+        points: [
+          "RAG over Supabase + pgvector",
+          "Tool-use cards inline in chat",
+          "Edge runtime, bilingual EN/TH",
+        ],
+      },
+      {
+        k: "DASHBOARDS",
+        points: [
+          "Owner Command Center for VerdeX Farm",
+          "Realtime sensor + business data",
+          "RLS on every table, per-user gating",
+        ],
+      },
+      {
+        k: "LINE OA",
+        points: [
+          "Rich Menu + Flex Messages + LIFF",
+          "Claude weekly Pulse Reports",
+          "Daily 07:00 Morning Reports",
+        ],
+      },
+    ],
+    process_kicker: "[02] PROCESS",
+    process: [
+      {
+        n: "01",
+        t: "DISCOVERY",
+        d: "Free 15-minute consultation. Requirement form covers business, customers, FAQs, desired flow. We map the constraint and the ship date.",
+      },
+      {
+        n: "02",
+        t: "DESIGN",
+        d: "Conversation flow diagrams + Rich Menu wireframes. Approved in writing before any code is written. No scope drift, no surprises.",
+      },
+      {
+        n: "03",
+        t: "BUILD & TEST",
+        d: "Working slice on a staging URL within the package timeline. Real data, real model, real LINE OA — you click the same buttons your customers will.",
+      },
+      {
+        n: "04",
+        t: "DEPLOY & HANDOFF",
+        d: "Production deploy. Full source code + ENV docs + Thai video tutorial + warranty terms. The keys are yours from day one.",
+      },
+    ],
+    chat_kicker: "[03] TALK TO ME",
+    chat_title: "ASK THE PORTFOLIO",
+    chat_help: "try a suggestion ↓",
+    pdpa: "This chat may store messages to improve service. No data is shared with third parties.",
+    pdpa_accept: "I UNDERSTAND",
+    placeholder: "What do you need built? Describe your project...",
+    send: "SEND",
+    cap: "session :: 20 messages max",
+    cap_reached: "Limit reached — contact via LINE or email",
+    suggest: [
+      "Show your portfolio",
+      "Pricing packages",
+      "VerdeX Farm case study",
+      "Are you available?",
+    ],
+    contact_label: "CONTACT",
+    contact: [
+      { k: "LINE", href: "https://line.me/ti/p/EeqOwz9udS" },
+      { k: "EMAIL", href: "mailto:prempaweet20@gmail.com" },
+      { k: "LINKEDIN", href: "https://www.linkedin.com/in/prempawee" },
+      { k: "GITHUB", href: "https://github.com/premkung87-star" },
+    ],
+    footer_links: [
+      { k: "VERDEX", href: "/case-studies/verdex" },
+      { k: "PORTFOLIO META", href: "/case-studies/this-portfolio" },
+      { k: "FALLBACK", href: "/fallback" },
+      { k: "STATUS", href: "/status" },
+    ],
+    welcome:
+      "Welcome. I'm Prempawee's portfolio AI. He's a Solo AI Developer in Chiang Mai shipping production systems for Thai businesses — LINE chatbots, admin dashboards, IoT, AI agents. All Claude-powered, all deployed, all live.",
+  },
+  th: {
+    headline: "คุยกับ portfolio ผม",
+    subhead: "เดี่ยว · เชียงใหม่ · ระดับ production · ai-native",
+    statusLabel: "STATUS · ONLINE",
+    scroll: "เลื่อน",
+    locale: "v.2026.04 · เชียงใหม่ · TH",
+    build_kicker: "[01] ผมสร้างอะไร",
+    build: [
+      {
+        k: "CHATBOTS",
+        points: [
+          "RAG บน Supabase + pgvector",
+          "Tool-use card ในแชทเลย",
+          "Edge runtime, EN/TH สองภาษา",
+        ],
+      },
+      {
+        k: "DASHBOARDS",
+        points: [
+          "Command Center สำหรับ VerdeX Farm",
+          "ข้อมูล sensor + ธุรกิจ realtime",
+          "RLS ทุก table, gate ตามผู้ใช้",
+        ],
+      },
+      {
+        k: "LINE OA",
+        points: [
+          "Rich Menu + Flex Messages + LIFF",
+          "Weekly Pulse Reports จาก Claude",
+          "Morning Report 07:00 รายวัน",
+        ],
+      },
+    ],
+    process_kicker: "[02] กระบวนการ",
+    process: [
+      {
+        n: "01",
+        t: "ค้นหา",
+        d: "ปรึกษาฟรี 15 นาที. กรอกแบบฟอร์ม business / customers / FAQs / flow. หา constraint และวันส่งงานให้เจอ.",
+      },
+      {
+        n: "02",
+        t: "ออกแบบ",
+        d: "Flow diagram + Rich Menu wireframe. อนุมัติเป็นลายลักษณ์อักษรก่อนเริ่มเขียน code. ไม่มี scope drift, ไม่มี surprise.",
+      },
+      {
+        n: "03",
+        t: "สร้าง & ทดสอบ",
+        d: "Slice ที่ใช้งานได้บน staging ตามกรอบเวลาแพ็คเกจ. ข้อมูลจริง, โมเดลจริง, LINE OA จริง — กดปุ่มเดียวกับลูกค้า.",
+      },
+      {
+        n: "04",
+        t: "ส่งมอบ",
+        d: "Deploy production. Source code + ENV doc + วิดีโอภาษาไทย + warranty. กุญแจเป็นของคุณตั้งแต่วันแรก.",
+      },
+    ],
+    chat_kicker: "[03] คุยกับผม",
+    chat_title: "ถาม PORTFOLIO ได้",
+    chat_help: "ลองเริ่มจาก ↓",
+    pdpa: "แชทนี้อาจบันทึกข้อความเพื่อปรับปรุงบริการ ข้อมูลจะไม่ถูกแบ่งปันกับบุคคลที่สาม",
+    pdpa_accept: "เข้าใจแล้ว",
+    placeholder: "คุณต้องการให้สร้างอะไร? เล่าเกี่ยวกับโปรเจคของคุณ...",
+    send: "ส่ง",
+    cap: "session :: สูงสุด 20 ข้อความ",
+    cap_reached: "ถึงขีดจำกัดแล้ว — ติดต่อทาง LINE หรืออีเมล",
+    suggest: [
+      "ขอดูผลงาน",
+      "ราคาแพ็คเกจ",
+      "เล่าเรื่อง VerdeX Farm",
+      "ตอนนี้ว่างไหม?",
+    ],
+    contact_label: "ติดต่อ",
+    contact: [
+      { k: "LINE", href: "https://line.me/ti/p/EeqOwz9udS" },
+      { k: "EMAIL", href: "mailto:prempaweet20@gmail.com" },
+      { k: "LINKEDIN", href: "https://www.linkedin.com/in/prempawee" },
+      { k: "GITHUB", href: "https://github.com/premkung87-star" },
+    ],
+    footer_links: [
+      { k: "VERDEX", href: "/case-studies/verdex" },
+      { k: "PORTFOLIO META", href: "/case-studies/this-portfolio" },
+      { k: "FALLBACK", href: "/fallback" },
+      { k: "STATUS", href: "/status" },
+    ],
+    welcome:
+      "ยินดีต้อนรับ ผมคือ AI portfolio ของ Prempawee. เขาเป็น Solo AI Developer อยู่เชียงใหม่ ส่งมอบระบบ production ให้ธุรกิจไทย — LINE chatbot, admin dashboard, IoT, AI agent. ทั้งหมดใช้ Claude, deploy แล้ว, ใช้งานจริงอยู่",
+  },
+} as const;

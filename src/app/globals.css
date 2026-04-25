@@ -73,10 +73,24 @@ body {
   animation: fadeIn 0.3s ease forwards;
 }
 
+/* Preview-redesign animations — used by /preview only */
+@keyframes marq {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.marquee:hover .marquee-track {
+  animation-play-state: paused;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 0.25; }
+  50% { opacity: 1; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .cursor-blink,
   .status-pulse,
-  .message-enter {
+  .message-enter,
+  .marquee-track {
     animation: none !important;
   }
   * {
