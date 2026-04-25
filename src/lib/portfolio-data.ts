@@ -640,3 +640,45 @@ export const SUGGESTED_PROMPTS: Array<{
     },
   },
 ];
+
+// 4-step work process shown above the chat. Content mirrors KB row #18
+// ("What is the work process?") so buyers who skim the ribbon see the
+// same story the chatbot tells — no AI hallucination surface.
+export const HOW_I_WORK: Array<{
+  n: string;
+  title: { en: string; th: string };
+  body: { en: string; th: string };
+}> = [
+  {
+    n: "01",
+    title: { en: "Discovery", th: "คุยงาน" },
+    body: {
+      en: "Requirement form: business, customers, FAQs, desired flow.",
+      th: "แบบฟอร์มสรุป business, ลูกค้า, FAQs, flow ที่ต้องการ",
+    },
+  },
+  {
+    n: "02",
+    title: { en: "Design", th: "ออกแบบ" },
+    body: {
+      en: "Flow diagrams + Rich Menu wireframes — approved before code.",
+      th: "Flow diagram + Rich Menu wireframes — ต้อง approve ก่อนเขียน code",
+    },
+  },
+  {
+    n: "03",
+    title: { en: "Build & test", th: "สร้าง & ทดสอบ" },
+    body: {
+      en: "Staging environment you can poke before production.",
+      th: "Staging ให้กดทดสอบก่อนขึ้น production",
+    },
+  },
+  {
+    n: "04",
+    title: { en: "Deploy & handoff", th: "ส่งมอบ" },
+    body: {
+      en: "Production deploy + docs + video tutorial + warranty window.",
+      th: "Deploy production + doc + วิดีโอสอน + warranty",
+    },
+  },
+];

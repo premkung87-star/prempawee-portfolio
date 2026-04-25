@@ -14,6 +14,7 @@ import {
   CONTACT,
   TRUST_FACTS,
   SUGGESTED_PROMPTS,
+  HOW_I_WORK,
 } from "@/lib/portfolio-data";
 
 const MAX_MESSAGES = 20;
@@ -346,6 +347,60 @@ export function Chat() {
             )}
           </div>
         </div>
+
+        {/* How-I-work ribbon — shown on first load (no messages yet) so
+            buyers see the 4-step process before starting the chat. Hidden
+            once the conversation starts so it doesn't crowd the scroll. */}
+        {messages.length === 0 && (
+          <section
+            aria-labelledby="how-i-work-heading"
+            className="mb-6 border border-white/10 rounded bg-white/[0.02] px-4 py-4"
+          >
+            <h2
+              id="how-i-work-heading"
+              className="text-[10px] uppercase tracking-[2px] text-[#888] mb-3"
+            >
+              {lang === "th" ? "ขั้นตอนทำงาน · 4 STEP" : "How I work · 4 steps"}
+            </h2>
+            <ol className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {HOW_I_WORK.map((step) => (
+                <li
+                  key={step.n}
+                  className="flex gap-3 text-[13px] text-[#ccc]"
+                >
+                  <span
+                    className="shrink-0 text-[11px] text-[#888] font-mono mt-0.5"
+                    aria-hidden="true"
+                  >
+                    {step.n}
+                  </span>
+                  <div>
+                    <div className="text-white font-medium mb-0.5">
+                      {step.title[lang]}
+                    </div>
+                    <div className="text-[12px] text-[#aaa] leading-snug">
+                      {step.body[lang]}
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ol>
+            <div className="mt-4 pt-3 border-t border-white/10 flex flex-wrap items-center justify-between gap-3">
+              <p className="text-[11px] text-[#888]">
+                {lang === "th"
+                  ? "ตอบใน 2-4 ชม. ทำการในเวลาทำงาน"
+                  : "Reply 2-4h during working hours"}
+              </p>
+              <a
+                href={CONTACT.contactUrl}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-white bg-white/10 hover:bg-white/20 border border-white/10 rounded transition-colors"
+              >
+                {lang === "th" ? "เริ่มโปรเจค" : "Start a project"}
+                <span aria-hidden="true">→</span>
+              </a>
+            </div>
+          </section>
+        )}
 
         {/* Chat messages */}
         {messages.map((msg) => (
