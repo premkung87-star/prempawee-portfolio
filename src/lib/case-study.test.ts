@@ -89,10 +89,8 @@ describe("VerdeX CaseStudy shape", () => {
     expect(cs?.screenshots.length).toBe(5);
   });
 
-  test("all screenshots are currently stubbed (stub-first release)", () => {
-    // First PR ships infrastructure; follow-up PR flips stubbed=false with
-    // real WebP assets in public/case-studies/verdex/.
-    expect(cs?.screenshots.every((s) => s.stubbed === true)).toBe(true);
+  test("all screenshots are non-stubbed (real images landed)", () => {
+    expect(cs?.screenshots.every((s) => s.stubbed === false)).toBe(true);
   });
 
   test("security has exactly 4 items", () => {
