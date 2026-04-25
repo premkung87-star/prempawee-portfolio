@@ -57,3 +57,7 @@ next-env.d.ts
 # OS
 Thumbs.db
 .env*.local
+
+# Claude Code session state (local only)
+.claude/pawee-phase-rejections.log
+.claude/scheduled_tasks.lock
