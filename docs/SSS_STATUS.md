@@ -1,13 +1,13 @@
 # SSS Infrastructure Status
 
-Snapshot after Path-A full build-out (all 10 items). Refresh when axes move. Last refreshed 2026-04-19 (Session 2 close: axes #1/#7/#8 updated).
+Snapshot after Path-A full build-out (all 10 items). Refresh when axes move. Last refreshed 2026-04-25 (Session 4: axis #2 verified live + reconciled).
 
 ## The 10 axes
 
 | # | Item | Status | Verify |
 |---|---|---|---|
 | 1 | **Sentry + 3 alerts** | 🟡 Transport live, alert rules pending | DSN configured (§22), SDK loads under Turbopack (§23–§24), CSP unblocked (§25), 52 spans captured in preview env. Alert rules config deferred to Session 4. |
-| 2 | **pgvector semantic + hybrid rerank** | ⚠️ Code + SQL live, embeddings pending | Apply `migrations/002_semantic.sql` in Supabase SQL Editor, set `OPENAI_API_KEY` in Vercel env, then `npm run kb:embed`. Hybrid retrieval activates per-request. |
+| 2 | **pgvector semantic + hybrid rerank** | ✅ Live (verified 2026-04-25) | Migration `002_semantic.sql` applied, `match_knowledge_hybrid` RPC callable, all 22 `knowledge_base` rows have OpenAI `text-embedding-3-small` (1536-dim) embeddings. Hybrid retrieval exercised on every `/api/chat` request — server log shows `semantic.{provider, model, top_ids, top_scores}` per turn. Cross-lingual TH↔EN retrieval verified (5 direct RPC probes + chat-route runtime probe). |
 | 3 | **Ragas-style eval in CI** | ✅ Live | `npm run eval:rag` — 10 probes + LLM-as-judge faithfulness/relevancy. CI job `ragas-eval` blocks merge if threshold (default 0.7) not met. |
 | 4 | **1h prompt caching** | ✅ Live | `cacheControl: { type: 'ephemeral', ttl: '1h' }` on system prompt. `/admin/finops` shows `cache_read_tokens` — aim for >80% hit rate once warm. |
 | 5 | **Edge runtime + region pin** | ✅ Edge live, region pin pending | `/api/chat` declares `runtime = 'edge'`. For Supabase region pinning: Dashboard → Project Settings → Compute → set region closest to Vercel (iad1 default). |
@@ -44,25 +44,46 @@ everything needed; these rules turn them into actionable alerts.
 - **Threshold:** **any** event in the last **5 minutes**
 - **Action:** Email (these should be very rare; even one matters)
 
-## Semantic RAG: one-time setup
+## Semantic RAG: one-time setup (✅ already complete)
+
+The activation below was completed in Session 2 (2026-04-17 late afternoon)
+and verified in Session 4 (2026-04-25). Re-run only if you add new
+`knowledge_base` entries.
 
 ```bash
-# 1. Apply the migration (Supabase SQL Editor — paste the contents of
-#    migrations/002_semantic.sql, run)
+# 1. Apply the migration (Supabase SQL Editor — paste migrations/002_semantic.sql, run)
+#    DONE — match_knowledge_hybrid RPC callable, idx_kb_embedding_ivfflat present
 
-# 2. Set OPENAI_API_KEY in Vercel env (upsert via Vercel API or dashboard)
+# 2. Set OPENAI_API_KEY in Vercel env (already done across all 3 envs)
 
-# 3. Pull env locally + generate embeddings for existing rows
+# 3. Generate embeddings for existing rows
 vercel env pull .env.local
 npm run kb:embed
+#    DONE — 22/22 rows embedded with text-embedding-3-small (1536-dim)
 
-# 4. (Optional) re-run anytime you add new knowledge_base entries:
+# 4. Re-run anytime you add new knowledge_base entries:
 npm run kb:embed           # only embeds null-embedding rows
 npm run kb:embed --force   # regenerates all
 ```
 
 The chat route falls back to full-context retrieval if semantic infra
 isn't configured — no regression risk, you can roll out gradually.
+
+**Verification probe** — re-run anytime to confirm axis #2 is healthy:
+
+```bash
+node --env-file=.env.local --input-type=module -e '
+import { createClient } from "@supabase/supabase-js";
+const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false }});
+const v = new Array(1536).fill(0);
+const { error } = await sb.rpc("match_knowledge_hybrid", { query_embedding: v, query_text: "ping", match_count: 1, semantic_weight: 0.6, fulltext_weight: 0.4, category_filter: null });
+const { count } = await sb.from("knowledge_base").select("id", { count: "exact", head: true }).not("embedding", "is", null);
+console.log({ rpc_ok: !error, embedded_rows: count });
+'
+```
+
+Healthy output: `{ rpc_ok: true, embedded_rows: 22 }` (or whatever the
+current row count is — what matters is `embedded_rows == total_rows`).
 
 ## GitHub branch protection (Item 7 finalization)
 
@@ -114,6 +135,12 @@ Still ⚠️ (user-gated) after this build:
 |---|---|---|
 | Custom domain | `prempawee.com` attached to Vercel, HSTS preload submitted (status: pending) | Session 2 |
 | Branch protection | Configured via GitHub UI (classic rule), verified via GH006 test | Session 2 |
+
+### Completed (Session 4, 2026-04-25)
+
+| Item | Completion note | Completed in |
+|---|---|---|
+| Semantic RAG axis #2 | Doc-reality drift discovered: activation actually shipped Session 2 (per AUDIT_LOG line 393) but SSS_STATUS row never flipped. Verified live 2026-04-25 via 5 direct RPC probes (3 EN + 2 TH) + chat-route runtime probe. All 22/22 rows embedded; `top_ids` consistent across direct-RPC vs chat-route paths. See AUDIT_LOG §32. | Session 4 |
 
 Once all those are through, every axis of the SSS ranking reaches its
 maximum. The code infrastructure — the part under my control — is already
