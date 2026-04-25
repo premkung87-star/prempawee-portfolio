@@ -86,8 +86,28 @@ body {
   50% { opacity: 1; }
 }
 
+/* Matrix cursor block-cursor blink (inside [ READY ▮ ] hover tag).
+   Distinct class name to avoid collision with chat.tsx's .cursor-blink. */
+@keyframes cursor-blink-block-frames {
+  50% { opacity: 0; }
+}
+.cursor-blink-block {
+  animation: cursor-blink-block-frames 1s steps(2) infinite;
+}
+
+/* Hide the OS cursor inside the preview-redesign root only. The live /
+   route (chat.tsx) keeps the OS cursor untouched. Touch devices fall
+   through and keep the OS cursor everywhere. */
+@media (hover: hover) {
+  .cursor-hidden,
+  .cursor-hidden * {
+    cursor: none !important;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .cursor-blink,
+  .cursor-blink-block,
   .status-pulse,
   .message-enter,
   .marquee-track {
