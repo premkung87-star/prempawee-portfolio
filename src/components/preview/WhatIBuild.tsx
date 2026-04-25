@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { BinaryStarField } from "./BinaryStarField";
 import { STR, type Lang } from "./preview-strings";
 
 // "What I build" section.
@@ -24,14 +25,28 @@ export function WhatIBuild({ lang }: { lang: Lang }) {
 
   return (
     <section
-      className="bg-black text-white border-t border-white pt-8"
+      className="relative bg-black text-white border-t border-white pt-8 overflow-hidden"
       data-screen-label="02 What I Build"
     >
-      <div className="px-[6vw] pb-6 font-mono text-xs tracking-[0.3em] opacity-60">
+      <BinaryStarField
+        stars={[
+          {
+            id: "b1",
+            x: 96,
+            y: 70,
+            scale: 0.65,
+            charSize: 8,
+            speed: 1.1,
+            shape: "sparkle",
+            rotation: 45,
+          },
+        ]}
+      />
+      <div className="relative z-[2] px-[6vw] pb-6 font-mono text-xs tracking-[0.3em] opacity-60">
         {t.build_kicker}
       </div>
       <div
-        className="grid grid-cols-1 sm:grid border-t border-white transition-[grid-template-columns] duration-[380ms] ease-[cubic-bezier(0.2,0.7,0.2,1)]"
+        className="relative z-[2] grid grid-cols-1 sm:grid border-t border-white transition-[grid-template-columns] duration-[380ms] ease-[cubic-bezier(0.2,0.7,0.2,1)]"
         style={{
           // sm+ uses the dynamic columns; mobile inherits grid-cols-1
           ["--sm-cols" as string]: cols,

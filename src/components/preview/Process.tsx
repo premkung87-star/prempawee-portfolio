@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { BinaryStarField } from "./BinaryStarField";
 import { DotMatrixNumber } from "./DotMatrixNumber";
 import { STR, type Lang } from "./preview-strings";
 
@@ -45,11 +46,37 @@ export function Process({ lang }: { lang: Lang }) {
   return (
     <section
       ref={wrapRef}
-      className="bg-black text-white border-t border-white relative"
+      className="bg-black text-white border-t border-white relative overflow-hidden"
       style={{ height: `${t.process.length * 90}vh` }}
       data-screen-label="03 Process"
     >
-      <div className="sticky top-0 h-dvh flex flex-col md:flex-row items-stretch px-4 sm:px-[6vw]">
+      <div className="absolute inset-0 pointer-events-none z-0">
+        <BinaryStarField
+          stars={[
+            {
+              id: "p1",
+              x: 92,
+              y: 8,
+              scale: 0.6,
+              charSize: 7,
+              speed: 1.0,
+              shape: "asterisk",
+              rotation: -8,
+            },
+            {
+              id: "p2",
+              x: 6,
+              y: 94,
+              scale: 0.5,
+              charSize: 6,
+              speed: 0.85,
+              shape: "fivept",
+              rotation: 14,
+            },
+          ]}
+        />
+      </div>
+      <div className="sticky top-0 h-dvh flex flex-col md:flex-row items-stretch px-4 sm:px-[6vw] z-[2]">
         {/* rail — top on mobile, left on desktop */}
         <div className="w-full md:w-60 border-b md:border-b-0 md:border-r border-white py-5 md:py-8 flex flex-col gap-3 md:gap-6">
           <div className="font-mono text-xs tracking-[0.3em] opacity-60">
