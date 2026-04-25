@@ -17,7 +17,7 @@ export function LangToggle({
         type="button"
         onClick={() => setLang("en")}
         aria-pressed={lang === "en"}
-        className={`px-2 py-1 rounded transition-colors ${
+        className={`inline-flex items-center justify-center min-h-[32px] min-w-[32px] px-2 rounded transition-colors ${
           lang === "en"
             ? "text-white bg-white/10"
             : "text-[#888] hover:text-[#ccc]"
@@ -29,7 +29,7 @@ export function LangToggle({
         type="button"
         onClick={() => setLang("th")}
         aria-pressed={lang === "th"}
-        className={`px-2 py-1 rounded transition-colors ${
+        className={`inline-flex items-center justify-center min-h-[32px] min-w-[32px] px-2 rounded transition-colors ${
           lang === "th"
             ? "text-white bg-white/10"
             : "text-[#888] hover:text-[#ccc]"

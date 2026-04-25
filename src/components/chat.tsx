@@ -210,7 +210,7 @@ export function Chat() {
         </div>
         <div className="flex items-center gap-4">
           <div
-            className="text-[11px]"
+            className="flex items-center gap-1 text-[11px]"
             role="group"
             aria-label="Display language"
           >
@@ -218,26 +218,23 @@ export function Chat() {
               type="button"
               onClick={() => setLang("en")}
               aria-pressed={lang === "en"}
-              className={
+              className={`inline-flex items-center justify-center min-h-[32px] min-w-[32px] px-2 rounded transition-colors ${
                 lang === "en"
-                  ? "text-white"
-                  : "text-[#aaa] hover:text-white transition-colors"
-              }
+                  ? "text-white bg-white/10"
+                  : "text-[#aaa] hover:text-white hover:bg-white/5"
+              }`}
             >
               EN
             </button>
-            <span className="text-[#888]" aria-hidden="true">
-              {" / "}
-            </span>
             <button
               type="button"
               onClick={() => setLang("th")}
               aria-pressed={lang === "th"}
-              className={
+              className={`inline-flex items-center justify-center min-h-[32px] min-w-[32px] px-2 rounded transition-colors ${
                 lang === "th"
-                  ? "text-white"
-                  : "text-[#aaa] hover:text-white transition-colors"
-              }
+                  ? "text-white bg-white/10"
+                  : "text-[#aaa] hover:text-white hover:bg-white/5"
+              }`}
             >
               TH
             </button>
@@ -603,7 +600,7 @@ export function Chat() {
                   key={prompt.en}
                   type="button"
                   onClick={() => sendSuggestion(prompt.send[lang])}
-                  className="px-3 py-1.5 text-xs text-[#ccc] border border-white/10 rounded bg-white/[0.02] hover:bg-white/10 hover:border-white/20 transition-colors"
+                  className="inline-flex items-center min-h-[36px] px-3 py-2 text-xs text-[#ccc] border border-white/10 rounded bg-white/[0.02] hover:bg-white/10 hover:border-white/20 transition-colors"
                 >
                   {prompt[lang]}
                 </button>
@@ -628,7 +625,7 @@ export function Chat() {
             <button
               type="button"
               onClick={onConsent}
-              className="shrink-0 px-4 py-1.5 text-xs text-white bg-white/10 rounded hover:bg-white/20 transition-colors"
+              className="shrink-0 min-h-[44px] px-4 py-2 text-xs text-white bg-white/10 rounded hover:bg-white/20 transition-colors"
             >
               {lang === "th" ? "เข้าใจแล้ว" : "I understand"}
             </button>
