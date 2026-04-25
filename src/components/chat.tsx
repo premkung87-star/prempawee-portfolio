@@ -308,16 +308,22 @@ export function Chat() {
         {lang === "th" ? "ข้ามไปแชท" : "Skip to chat"}
       </a>
 
-      {/* Chat area */}
+      {/* Chat area. <main> is the page's primary landmark (Lighthouse
+          requires every document to expose one). The inner <div role="log">
+          carries the live-region semantics — splitting the two roles is
+          required because role="log" on <main> would override the implicit
+          "main" landmark role and Lighthouse would flag it. */}
       <main
         id="chat-main"
         ref={scrollRef}
         className="flex-1 overflow-y-auto px-4 py-6 max-w-[800px] w-full mx-auto"
-        role="log"
-        aria-live="polite"
-        aria-label="Chat messages"
-        aria-atomic="false"
       >
+        <div
+          role="log"
+          aria-live="polite"
+          aria-label="Chat messages"
+          aria-atomic="false"
+        >
         {/* Welcome message */}
         <div className="mb-6 message-enter">
           <div className="text-[10px] uppercase tracking-[2px] text-[#888] mb-1.5">
@@ -614,6 +620,7 @@ export function Chat() {
             </div>
           </div>
         )}
+        </div>
       </main>
 
       {/* PDPA consent banner */}
