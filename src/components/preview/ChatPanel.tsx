@@ -83,7 +83,16 @@ function readToolInput<T extends Record<string, unknown>>(part: unknown): T {
   return {} as T;
 }
 
-export function ChatPanel({ lang }: { lang: Lang }) {
+export function ChatPanel({
+  lang,
+  tall = false,
+}: {
+  lang: Lang;
+  // When true, the panel renders 640px tall with a soft white spotlight
+  // shadow — used in the redesigned Hero where the chat is the centerpiece.
+  // Defaults to the original 600px / no shadow for the legacy ChatSection.
+  tall?: boolean;
+}) {
   const t = STR[lang];
   const { messages, sendMessage, status } = useChat();
   const [input, setInput] = useState("");
@@ -156,7 +165,15 @@ export function ChatPanel({ lang }: { lang: Lang }) {
   }
 
   return (
-    <div className="border border-white bg-black text-white flex flex-col h-[600px]">
+    <div
+      className="border border-white bg-black text-white flex flex-col"
+      style={{
+        height: tall ? 640 : 600,
+        boxShadow: tall
+          ? "0 0 0 1px rgba(255,255,255,0.4), 0 0 60px rgba(255,255,255,0.08)"
+          : undefined,
+      }}
+    >
       <div className="border-b border-white px-3.5 py-2.5 flex justify-between items-center font-mono text-[11px] tracking-[0.18em]">
         <span>:: CHAT_v2 · sonnet · edge</span>
         <span className="opacity-60">

@@ -7,10 +7,31 @@ export type Lang = "en" | "th";
 export const STR = {
   en: {
     headline: "talk to my portfolio",
-    subhead: "solo · chiang mai · production-grade · ai-native",
+    subhead:
+      "the AI knows every project, price, and timeline. ask anything.",
+    hero_kicker:
+      "PORTFOLIO_AI :: v.2026.04 :: sonnet · edge · RAG-grounded",
+    hero_try_terminal: "↘ TRY THE TERMINAL ON THE RIGHT",
+    hero_online: "ONLINE",
+    stat_live_value: "8+",
+    stat_live_label: "live projects",
+    stat_ttfb_value: "< 400ms",
+    stat_ttfb_label: "TTFB · edge",
+    stat_hallu_value: "0",
+    stat_hallu_label: "hallucinations",
     statusLabel: "STATUS · ONLINE",
     scroll: "SCROLL",
     locale: "v.2026.04 · CHIANG MAI · TH",
+    proof_kicker: "[02] SHIPPED",
+    proof_help: "EVERY URL IS LIVE · CLICK TO VISIT",
+    proof_read: "READ CASE",
+    featured_kicker: "[03] FEATURED CASE",
+    featured_meta: "VERDEX FARM · 2026",
+    featured_headline_l1: "verdex farm,",
+    featured_headline_l2: "start to ship.",
+    featured_body:
+      "Smart greenhouse pilot for Thai citrus farmers. Landing page, blog, owner command center web app, and a LINE bot delivering daily 07:00 Morning Reports plus weekly Pulse Reports. Bilingual EN/TH end to end. Built solo on Next.js, Supabase, Vercel, and Claude — the full case study covers requirements, architecture, screenshots, and tradeoffs.",
+    featured_cta: "READ THE FULL CASE STUDY →",
     build_kicker: "[01] WHAT I BUILD",
     build: [
       {
@@ -71,10 +92,10 @@ export const STR = {
     cap: "session :: 20 messages max",
     cap_reached: "Limit reached — contact via LINE or email",
     suggest: [
-      "Show your portfolio",
-      "Pricing packages",
-      "VerdeX Farm case study",
-      "Are you available?",
+      "Walk me through the VerdeX Farm case.",
+      "How do you avoid hallucinations?",
+      "How much for a chatbot?",
+      "Are you free in May?",
     ],
     contact_label: "CONTACT",
     contact: [
@@ -94,10 +115,29 @@ export const STR = {
   },
   th: {
     headline: "คุยกับ portfolio ผม",
-    subhead: "เดี่ยว · เชียงใหม่ · ระดับ production · ai-native",
+    subhead: "AI รู้ทุกโปรเจกต์ ราคา และ timeline. ถามอะไรก็ได้.",
+    hero_kicker: "PORTFOLIO_AI :: v.2026.04 :: sonnet · edge · RAG",
+    hero_try_terminal: "↘ ลองถามดูในกล่องด้านขวา",
+    hero_online: "ONLINE",
+    stat_live_value: "8+",
+    stat_live_label: "โปรเจกต์ที่ live",
+    stat_ttfb_value: "< 400ms",
+    stat_ttfb_label: "TTFB · edge",
+    stat_hallu_value: "0",
+    stat_hallu_label: "hallucinations",
     statusLabel: "STATUS · ONLINE",
     scroll: "เลื่อน",
     locale: "v.2026.04 · เชียงใหม่ · TH",
+    proof_kicker: "[02] งานที่ส่งมอบแล้ว",
+    proof_help: "ทุก URL ใช้งานได้จริง · กดเพื่อเปิด",
+    proof_read: "ดูรายละเอียด",
+    featured_kicker: "[03] เคสที่เลือกมา",
+    featured_meta: "VERDEX FARM · 2026",
+    featured_headline_l1: "verdex farm,",
+    featured_headline_l2: "ตั้งแต่เริ่มถึงส่งมอบ.",
+    featured_body:
+      "Smart greenhouse pilot สำหรับชาวสวนส้มไทย. Landing page, blog, owner command center web app, และ LINE bot ที่ส่ง Morning Report 07:00 ทุกวัน พร้อม Pulse Report รายสัปดาห์. EN/TH สองภาษาเต็มทั้งระบบ. สร้างคนเดียวบน Next.js, Supabase, Vercel, และ Claude — case study เต็มมีทั้ง requirement, architecture, screenshot, และ tradeoff.",
+    featured_cta: "อ่านเคสแบบเต็ม →",
     build_kicker: "[01] ผมสร้างอะไร",
     build: [
       {
@@ -158,10 +198,10 @@ export const STR = {
     cap: "session :: สูงสุด 20 ข้อความ",
     cap_reached: "ถึงขีดจำกัดแล้ว — ติดต่อทาง LINE หรืออีเมล",
     suggest: [
-      "ขอดูผลงาน",
-      "ราคาแพ็คเกจ",
-      "เล่าเรื่อง VerdeX Farm",
-      "ตอนนี้ว่างไหม?",
+      "เล่าเคส VerdeX Farm ให้ฟังหน่อย",
+      "กัน hallucination ยังไง?",
+      "chatbot ราคาเท่าไหร่?",
+      "พ.ค. ว่างไหม?",
     ],
     contact_label: "ติดต่อ",
     contact: [

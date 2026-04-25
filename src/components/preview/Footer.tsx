@@ -1,5 +1,6 @@
 "use client";
 
+import { BinaryStarField } from "./BinaryStarField";
 import { Logo } from "./Logo";
 import { STR, type Lang } from "./preview-strings";
 
@@ -15,11 +16,27 @@ export function Footer({ lang }: { lang: Lang }) {
   const t = STR[lang];
   return (
     <footer
-      className="bg-black text-white border-t border-white px-4 sm:px-[6vw] pt-8 sm:pt-10 pb-7 grid gap-6 sm:gap-8 items-start grid-cols-1 sm:[grid-template-columns:auto_1fr_auto]"
+      className="relative overflow-hidden bg-black text-white border-t border-white px-4 sm:px-[6vw] pt-8 sm:pt-10 pb-7 grid gap-6 sm:gap-8 items-start grid-cols-1 sm:[grid-template-columns:auto_1fr_auto]"
       data-screen-label="05 Footer"
     >
-      <Logo size={56} />
-      <div className="flex flex-col gap-4">
+      <BinaryStarField
+        stars={[
+          {
+            id: "f1",
+            x: 70,
+            y: 50,
+            scale: 0.45,
+            charSize: 6,
+            speed: 1.0,
+            shape: "burst",
+            rotation: 12,
+          },
+        ]}
+      />
+      <div className="relative z-[2]">
+        <Logo size={56} />
+      </div>
+      <div className="relative z-[2] flex flex-col gap-4">
         <div className="flex gap-5 flex-wrap font-mono text-xs tracking-[0.18em]">
           {t.contact.map((c) => (
             <a
@@ -47,7 +64,7 @@ export function Footer({ lang }: { lang: Lang }) {
           ))}
         </div>
       </div>
-      <div className="text-left sm:text-right font-mono text-[10px] opacity-45 tracking-[0.1em] leading-relaxed">
+      <div className="relative z-[2] text-left sm:text-right font-mono text-[10px] opacity-45 tracking-[0.1em] leading-relaxed">
         build · {BUILD_TS}
         <br />
         sha · {BUILD_SHA} · main
