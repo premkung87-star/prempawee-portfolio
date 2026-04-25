@@ -60,16 +60,58 @@ describe("PROJECTS array integrity", () => {
     expect(portfolio?.caseStudy).toBeDefined();
   });
 
-  test("verdex entry has no caseStudy", () => {
+  test("verdex entry has caseStudy defined", () => {
     const verdex = PROJECTS.find((p) => p.slug === "verdex");
     expect(verdex).toBeDefined();
-    expect(verdex?.caseStudy).toBeUndefined();
+    expect(verdex?.caseStudy).toBeDefined();
   });
 
   test("nwl-club entry has no caseStudy", () => {
     const nwl = PROJECTS.find((p) => p.slug === "nwl-club");
     expect(nwl).toBeDefined();
     expect(nwl?.caseStudy).toBeUndefined();
+  });
+});
+
+describe("VerdeX CaseStudy shape", () => {
+  const verdex = PROJECTS.find((p) => p.slug === "verdex");
+  const cs = verdex?.caseStudy;
+
+  test("caseStudy is defined (precondition)", () => {
+    expect(cs).toBeDefined();
+  });
+
+  test("metrics has exactly 4 items", () => {
+    expect(cs?.metrics.length).toBe(4);
+  });
+
+  test("screenshots has exactly 5 items", () => {
+    expect(cs?.screenshots.length).toBe(5);
+  });
+
+  test("all screenshots are currently stubbed (stub-first release)", () => {
+    // First PR ships infrastructure; follow-up PR flips stubbed=false with
+    // real WebP assets in public/case-studies/verdex/.
+    expect(cs?.screenshots.every((s) => s.stubbed === true)).toBe(true);
+  });
+
+  test("security has exactly 4 items", () => {
+    expect(cs?.security.length).toBe(4);
+  });
+
+  test("cta.mailto starts with mailto:prempaweet20@gmail.com", () => {
+    expect(cs?.cta.mailto.startsWith("mailto:prempaweet20@gmail.com")).toBe(
+      true,
+    );
+  });
+
+  test("all Bilingual fields in caseStudy have non-empty en and th", () => {
+    const bilinguals = collectBilingualsDeep(cs);
+    expect(bilinguals.length).toBeGreaterThan(0);
+    for (const b of bilinguals) {
+      expect(b.en.trim().length).toBeGreaterThan(0);
+      expect(b.th.trim().length).toBeGreaterThan(0);
+    }
   });
 });
 
