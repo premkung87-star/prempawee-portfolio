@@ -237,6 +237,13 @@ export default async function RootLayout({
 }>) {
   // nonce is set by src/proxy.ts per-request; undefined in dev (CSP off).
   const nonce = (await headers()).get("x-nonce") ?? undefined;
+  const clarityProjectIdRaw = process.env.NEXT_PUBLIC_CLARITY_PROJECT_ID;
+  // Clarity IDs are short alphanumeric strings — guard against injection
+  // since the value is interpolated into an inline <script>.
+  const clarityProjectId =
+    clarityProjectIdRaw && /^[a-zA-Z0-9]+$/.test(clarityProjectIdRaw)
+      ? clarityProjectIdRaw
+      : undefined;
   return (
     <html lang="en" className={`${mono.variable} ${renaissance.variable} h-full`}>
       <head>
@@ -247,6 +254,14 @@ export default async function RootLayout({
             __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c"),
           }}
         />
+        {clarityProjectId ? (
+          <script
+            nonce={nonce}
+            dangerouslySetInnerHTML={{
+              __html: `(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);})(window,document,"clarity","script","${clarityProjectId}");`,
+            }}
+          />
+        ) : null}
       </head>
       <body className="min-h-full flex flex-col bg-[#0a0a0a] text-[#e0e0e0] font-mono antialiased">
         {children}

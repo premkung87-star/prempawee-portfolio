@@ -55,10 +55,10 @@ function buildCsp(nonce: string, isDev: boolean): string {
   }
   const directives = [
     `default-src 'self'`,
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' https://va.vercel-scripts.com`,
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' https://va.vercel-scripts.com https://www.clarity.ms`,
     `style-src 'self' 'unsafe-inline'`,
-    `connect-src 'self' https://*.supabase.co https://api.anthropic.com https://*.upstash.io https://va.vercel-scripts.com https://vitals.vercel-insights.com https://*.sentry.io`,
-    `img-src 'self' data: blob: https://*.sentry.io`,
+    `connect-src 'self' https://*.supabase.co https://api.anthropic.com https://*.upstash.io https://va.vercel-scripts.com https://vitals.vercel-insights.com https://*.sentry.io https://*.clarity.ms`,
+    `img-src 'self' data: blob: https://*.sentry.io https://*.clarity.ms`,
     `font-src 'self' https://fonts.gstatic.com`,
     `frame-ancestors 'none'`,
     `base-uri 'self'`,

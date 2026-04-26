@@ -1,6 +1,38 @@
 # Audit Log — Prempawee Portfolio
 
-Last audit: 2026-04-19 (Session 1 close)
+Last audit: 2026-04-26 (Microsoft Clarity wiring)
+
+---
+
+## ✅ MICROSOFT CLARITY WIRED — 2026-04-26 · session-replay analytics added behind env gate
+
+Added Microsoft Clarity (free session replay + heatmaps) as a complement to Vercel Analytics. The integration is **env-gated** — script renders only when `NEXT_PUBLIC_CLARITY_PROJECT_ID` is set. Until the user provisions a Clarity project ID and sets the var in Vercel, the change is a pure no-op.
+
+**Files touched (watchlist):**
+- `src/app/layout.tsx` — inline `<script nonce={nonce}>` in `<head>`, gated on the env var. Project ID is regex-validated (`/^[a-zA-Z0-9]+$/`) before interpolation as defense in depth against injection through environment.
+- `src/proxy.ts` (CSP) — extended `script-src` with `https://www.clarity.ms`, `connect-src` and `img-src` with `https://*.clarity.ms`. The strict-dynamic + nonce pipeline makes the explicit `script-src` allowlist redundant for the loader script (nonce'd inline → trusts transitively-loaded Clarity tag) but kept for defense in depth.
+- `docs/OPERATIONS.md` — new row in the Secrets / env matrix.
+
+**Verification gate results:**
+- `npm run typecheck` — pass
+- `npm run test` — 63/63 unit tests pass
+- `npm run build` — pass
+- `BASE_URL=http://localhost:3000 npm run test:e2e` against local prod build — 10/10 pass (1 skipped, the localhost CSP-headers test that always skips on localhost by design)
+- Live curl verification — CSP response header confirmed to include all three new clarity directives. With env var unset, page HTML contains zero `clarity` occurrences (expected; safe absence behavior verified).
+
+**Why session replay matters here:**
+The portfolio has Vercel Analytics (traffic counts) and Sentry (errors), but no surface that shows what visitors *actually do* on the page. AUDIT_LOG §17 + §20 documented two incidents where every indirect signal lied (200 OK, A+ headers, "conversations" logging) while real users could not click. Clarity recordings add a primary-source signal: if hydration silently breaks again, recordings will show users mashing buttons that do nothing — a stronger, earlier signal than Sentry quietness.
+
+**Cost:** Free forever from Microsoft. Privacy mode + masked text on by default. PDPA-relevant since EN/TH visitors will be recorded — disclose in the privacy notice once enabled.
+
+**Follow-up needed before activation:**
+1. Sign up at https://clarity.microsoft.com → create project for prempawee.com → copy Project ID
+2. Add `NEXT_PUBLIC_CLARITY_PROJECT_ID=<id>` to Vercel project env (Production + Preview)
+3. Trigger a deploy; confirm Clarity dashboard receives sessions within 2 minutes
+4. Update the privacy notice on the site to disclose session-replay tracking
+5. Re-run E2E against the preview URL to confirm no CSP report-uri violations from `*.clarity.ms`
+
+**Why no PR-time preview verification this session:** the integration is a no-op until step 2 above. Post-activation E2E is mandatory per AGENTS.md and tracked in follow-up #5 above.
 
 ---
 

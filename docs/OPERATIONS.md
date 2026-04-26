@@ -28,6 +28,7 @@ Set in Vercel project env for Production + Preview + Development:
 | `ADMIN_SECRET` | Cookie value for `/admin` | Optional (admin disabled without it) |
 | `NOTIFICATION_WEBHOOK_URL` | Slack/Discord/n8n URL for lead alerts | Optional |
 | `SENTRY_DSN` | Error tracking (see §Observability) | Optional |
+| `NEXT_PUBLIC_CLARITY_PROJECT_ID` | Microsoft Clarity project ID for session-replay + heatmap analytics. Get from https://clarity.microsoft.com → Settings → Setup. Alphanumeric only. | Optional |
 | `FLAG_*` | Runtime feature flags (see `src/lib/feature-flags.ts`) | Optional |
 
 ## Day-to-day tasks
