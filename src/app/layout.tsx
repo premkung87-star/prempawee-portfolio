@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { JetBrains_Mono } from "next/font/google";
+import { EB_Garamond, JetBrains_Mono } from "next/font/google";
 import { headers } from "next/headers";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
@@ -10,6 +10,14 @@ import "./globals.css";
 const mono = JetBrains_Mono({
   variable: "--font-jetbrains-mono",
   subsets: ["latin"],
+});
+
+const renaissance = EB_Garamond({
+  variable: "--font-renaissance",
+  subsets: ["latin"],
+  weight: ["400", "500"],
+  style: ["normal", "italic"],
+  display: "swap",
 });
 
 const siteUrl = SITE_URL;
@@ -230,7 +238,7 @@ export default async function RootLayout({
   // nonce is set by src/proxy.ts per-request; undefined in dev (CSP off).
   const nonce = (await headers()).get("x-nonce") ?? undefined;
   return (
-    <html lang="en" className={`${mono.variable} h-full`}>
+    <html lang="en" className={`${mono.variable} ${renaissance.variable} h-full`}>
       <head>
         <script
           type="application/ld+json"
