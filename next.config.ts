@@ -74,6 +74,20 @@ const nextConfig: NextConfig = {
   images: {
     formats: ["image/avif", "image/webp"],
   },
+
+  // 301 redirects. /preview was the staging route for the redesign that now
+  // lives at /. Permanent redirect keeps any external backlinks (the design
+  // was previewed on internal/social channels during Session 6) routed to
+  // the canonical URL. AUDIT_LOG §38 / Phase 2 cutover (Session 7).
+  async redirects() {
+    return [
+      {
+        source: "/preview",
+        destination: "/",
+        permanent: true,
+      },
+    ];
+  },
 };
 
 // Wrap with Sentry config. When SENTRY_DSN/SENTRY_AUTH_TOKEN are unset,

@@ -12,11 +12,11 @@ import { ProofStrip } from "./ProofStrip";
 import { WhatIBuild } from "./WhatIBuild";
 import type { Lang } from "./preview-strings";
 
-// Landing root for the preview redesign. Owns top-level lang state, persists
-// to localStorage (key: "lang") same as the existing chat.tsx so the choice
-// is shared across both /preview and / for users who flip between them.
-// Mounted on /preview only — / continues to render the existing chat.tsx
-// design until cutover.
+// Landing root for the prempawee.com homepage. Owns top-level lang state,
+// persists to localStorage (key: "lang"). Originally lived at /preview as
+// the staging surface for the redesign; promoted to / in the Phase 2 cutover
+// (Session 7, AUDIT_LOG §38). The /preview route is gone and 301-redirects
+// to / via next.config.ts.
 //
 // v3 senior pass (2026-04-25):
 //   - NavBar mounted at the top — sticky, single source of truth for the
