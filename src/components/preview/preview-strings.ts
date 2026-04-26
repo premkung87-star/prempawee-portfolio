@@ -118,6 +118,10 @@ export const STR = {
       { k: "FALLBACK", href: "/fallback" },
       { k: "STATUS", href: "/status" },
     ],
+    philosophy_kicker: "[02c] PHILOSOPHY",
+    philosophy_quote:
+      "Build the strongest foundation possible, minimize weaknesses, before increasing strengths.",
+    philosophy_attribution: "Prempawee · One Person Business",
     feedback_link: "GIVE FEEDBACK",
     feedback_kicker: "[FEEDBACK]",
     feedback_type_label: "TYPE",
@@ -257,6 +261,10 @@ export const STR = {
       { k: "FALLBACK", href: "/fallback" },
       { k: "STATUS", href: "/status" },
     ],
+    philosophy_kicker: "[02c] หลักการทำงาน",
+    philosophy_quote:
+      "สร้างรากฐานให้แข็งแกร่งที่สุด ลดจุดอ่อนก่อนที่จะเพิ่มจุดแข็ง",
+    philosophy_attribution: "Prempawee · One Person Business",
     feedback_link: "ส่งข้อเสนอแนะ",
     feedback_kicker: "[ข้อเสนอแนะ]",
     feedback_type_label: "ประเภท",

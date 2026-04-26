@@ -7,6 +7,7 @@ import { Footer } from "./Footer";
 import { Hero } from "./Hero";
 import { Marquee } from "./Marquee";
 import { NavBar } from "./NavBar";
+import { Philosophy } from "./Philosophy";
 import { Process } from "./Process";
 import { ProofStrip } from "./ProofStrip";
 import { WhatIBuild } from "./WhatIBuild";
@@ -76,6 +77,7 @@ export function Landing() {
         <Marquee />
         <WhatIBuild lang={lang} />
         <ProofStrip lang={lang} />
+        <Philosophy lang={lang} />
         <Marquee reverse />
         <FeaturedCase lang={lang} />
         <Process lang={lang} />
