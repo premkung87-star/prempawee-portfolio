@@ -19,10 +19,16 @@ import { rateLimit, getClientIp } from "@/lib/rate-limit";
 import { logError, logInfo, logWarn } from "@/lib/logger";
 import { getFlag } from "@/lib/feature-flags";
 
-// Edge runtime — lower cold-start latency, global distribution, native Web
-// APIs (fetch, crypto, streams). All our deps are edge-compatible:
-// @ai-sdk/anthropic, @supabase/supabase-js, @upstash/redis, zod, sentry.
-export const runtime = "edge";
+// Node runtime pinned to iad1. Anthropic API is US-east primary; pinning to
+// Singapore would *add* ~180ms egress per call. More importantly, edge
+// runtime fragmented our prompt cache across 4-6 regions (sin1, hkg1, syd1,
+// fra1, iad1) — with ~200-365 calls/day, no single region warmed within the
+// 1h TTL. Result: 421k cache writes / 0 cache reads in the first 30 days.
+// Consolidating to one region recovers the cache. See
+// docs/superpowers/specs/2026-04-26-haiku-cache-cost-cut-design.md.
+export const runtime = "nodejs";
+export const preferredRegion = "iad1";
+export const maxDuration = 60;
 
 // UI message schema from the client (AI SDK v6 shape).
 // We validate each element defensively before passing to convertToModelMessages.
@@ -42,9 +48,6 @@ const uiMessageSchema = z
   .passthrough();
 
 const uiMessagesSchema = z.array(uiMessageSchema).min(1).max(100);
-
-// maxDuration is Node-only; edge functions run under a different timeout model.
-// The 30s chat cap is enforced by Claude-side request timeouts anyway.
 
 const baseSystemPrompt = `You are Prempawee's portfolio AI. You represent a Solo AI Developer based in Chiang Mai who ships production systems for Thai businesses — LINE chatbots, admin dashboards, IoT platforms, AI agents. Full-stack, Claude Opus + Sonnet powered. LINE OA chatbots are one specialty among several — not the only offering.
 
@@ -300,16 +303,22 @@ export async function POST(req: Request) {
 
   const result = streamText({
     model: anthropic("claude-sonnet-4-20250514"),
-    system: systemPrompt,
-    messages,
-    providerOptions: {
-      // 1h TTL prompt caching. Extends the default 5-min ephemeral tier.
-      // Because the system prompt (base rules + full KB) is stable across
-      // queries — per-query semantic retrieval lives in the user message —
-      // this cache should hit on ~every request after warm-up. Measured
-      // via cache_read_input_tokens in the onFinish callback below.
-      anthropic: { cacheControl: { type: "ephemeral", ttl: "1h" } },
+    // 1h TTL prompt caching attached to the SYSTEM MESSAGE specifically.
+    // Top-level providerOptions on streamText is NOT propagated to the
+    // system content block in AI SDK v6.0.168 — verified against
+    // node_modules/@ai-sdk/anthropic/dist/index.mjs line 2086-2092 (system
+    // case reads providerOptions from the message itself). Putting it
+    // here applies cache_control to the stable system prefix (base rules +
+    // full KB), which is what we want cached. Per-query semantic retrieval
+    // lives in the user message and stays out of the cached prefix.
+    system: {
+      role: "system",
+      content: systemPrompt,
+      providerOptions: {
+        anthropic: { cacheControl: { type: "ephemeral", ttl: "1h" } },
+      },
     },
+    messages,
     stopWhen: stepCountIs(3),
     onError: ({ error }) => {
       logError("chat.stream.error", {
