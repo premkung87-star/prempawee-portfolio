@@ -118,6 +118,31 @@ export const STR = {
       { k: "FALLBACK", href: "/fallback" },
       { k: "STATUS", href: "/status" },
     ],
+    feedback_link: "GIVE FEEDBACK",
+    feedback_kicker: "[FEEDBACK]",
+    feedback_type_label: "TYPE",
+    feedback_types: {
+      bug: "BUG",
+      suggestion: "SUGGESTION",
+      thanks: "THANKS",
+      other: "OTHER",
+    },
+    feedback_body_label: "MESSAGE",
+    feedback_body_placeholder: "What's on your mind?",
+    feedback_email_label: "EMAIL",
+    feedback_email_help: "(optional — if you'd like a reply)",
+    feedback_email_placeholder: "you@example.com",
+    feedback_consent:
+      "By submitting, you consent to storing your feedback and email if provided. No data shared with third parties.",
+    feedback_submit: "SUBMIT",
+    feedback_submitting: "SENDING...",
+    feedback_thanks: "Thanks. Your feedback is logged.",
+    feedback_close: "CLOSE",
+    feedback_error:
+      "Couldn't send. Please try again or email directly.",
+    feedback_error_validation: "Please fill out the form correctly.",
+    feedback_error_rate_limited:
+      "Too many submissions. Try again in an hour.",
     welcome:
       "Welcome. I'm Prempawee's portfolio AI. He's a Solo AI Developer in Chiang Mai shipping production systems for Thai businesses — LINE chatbots, admin dashboards, IoT, AI agents. All Claude-powered, all deployed, all live.",
   },
@@ -232,6 +257,31 @@ export const STR = {
       { k: "FALLBACK", href: "/fallback" },
       { k: "STATUS", href: "/status" },
     ],
+    feedback_link: "ส่งข้อเสนอแนะ",
+    feedback_kicker: "[ข้อเสนอแนะ]",
+    feedback_type_label: "ประเภท",
+    feedback_types: {
+      bug: "บัก",
+      suggestion: "ข้อเสนอแนะ",
+      thanks: "ขอบคุณ",
+      other: "อื่น ๆ",
+    },
+    feedback_body_label: "ข้อความ",
+    feedback_body_placeholder: "อยากบอกอะไรกับเราไหม?",
+    feedback_email_label: "อีเมล",
+    feedback_email_help: "(ไม่บังคับ — ถ้าอยากให้ติดต่อกลับ)",
+    feedback_email_placeholder: "you@example.com",
+    feedback_consent:
+      "การส่งข้อเสนอแนะเท่ากับยินยอมให้เก็บข้อความและอีเมล (ถ้ามี) ไม่มีการแชร์ข้อมูลกับบุคคลที่สาม",
+    feedback_submit: "ส่ง",
+    feedback_submitting: "กำลังส่ง...",
+    feedback_thanks: "ขอบคุณ บันทึกข้อเสนอแนะของคุณแล้ว",
+    feedback_close: "ปิด",
+    feedback_error:
+      "ส่งไม่สำเร็จ กรุณาลองใหม่หรือส่งอีเมลโดยตรง",
+    feedback_error_validation: "กรุณากรอกแบบฟอร์มให้ถูกต้อง",
+    feedback_error_rate_limited:
+      "ส่งบ่อยเกินไป รอ 1 ชั่วโมงแล้วลองใหม่",
     welcome:
       "ยินดีต้อนรับ ผมคือ AI portfolio ของ Prempawee. เขาเป็น Solo AI Developer อยู่เชียงใหม่ ส่งมอบระบบ production ให้ธุรกิจไทย — LINE chatbot, admin dashboard, IoT, AI agent. ทั้งหมดใช้ Claude, deploy แล้ว, ใช้งานจริงอยู่",
   },

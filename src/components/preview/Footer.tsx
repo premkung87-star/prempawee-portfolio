@@ -1,6 +1,8 @@
 "use client";
 
+import { useId, useState } from "react";
 import { BinaryStarField } from "./BinaryStarField";
+import { FeedbackForm } from "./FeedbackForm";
 import { Logo } from "./Logo";
 import { STR, type Lang } from "./preview-strings";
 
@@ -8,12 +10,18 @@ import { STR, type Lang } from "./preview-strings";
 // + timestamp (the engineer-flex detail that signals "I run a real CI
 // pipeline"). All links open in new tabs where external; internal links
 // route via Next normally.
+//
+// Feedback button (Session 7): a 5th entry in the footer-links rail toggles
+// an inline-expanding FeedbackForm below the rail. No modal, no route
+// change — keeps the matrix-terminal aesthetic clean.
 
 const BUILD_TS = "2026.04.25.1900Z"; // updated per release; manual for now
 const BUILD_SHA = "preview"; // replaced at deploy time once we cut over
 
 export function Footer({ lang }: { lang: Lang }) {
   const t = STR[lang];
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const feedbackRegionId = useId();
   return (
     <footer
       id="contact"
@@ -63,7 +71,25 @@ export function Footer({ lang }: { lang: Lang }) {
               {l.k}
             </a>
           ))}
+          <button
+            type="button"
+            onClick={() => setFeedbackOpen((v) => !v)}
+            aria-expanded={feedbackOpen}
+            aria-controls={feedbackRegionId}
+            data-cursor="hover"
+            className="text-white no-underline min-h-[32px] inline-flex items-center bg-transparent border-0 p-0 cursor-pointer font-mono text-[11px] tracking-[0.18em]"
+          >
+            {t.feedback_link} {feedbackOpen ? "↑" : "→"}
+          </button>
         </div>
+        {feedbackOpen && (
+          <div id={feedbackRegionId} className="max-w-[720px]">
+            <FeedbackForm
+              lang={lang}
+              onClose={() => setFeedbackOpen(false)}
+            />
+          </div>
+        )}
       </div>
       <div className="relative z-[2] text-left sm:text-right font-mono text-[10px] opacity-45 tracking-[0.1em] leading-relaxed">
         build · {BUILD_TS}
