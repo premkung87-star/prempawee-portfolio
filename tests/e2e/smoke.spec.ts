@@ -21,12 +21,23 @@ async function freshVisitor(page: Page) {
 
 test.describe("prempawee.com · hydration smoke", () => {
   test("page loads and welcome message is visible", async ({ page }) => {
-    await page.goto("/");
+    await freshVisitor(page);
+    // Post-cutover ChatPanel correctly gates the chat behind PDPA consent —
+    // welcome + input are not in the DOM until the user clicks "I UNDERSTAND".
+    // Dismiss consent to reveal them, then assert.
+    const consent = page.getByRole("button", { name: /I understand/i });
+    if (await consent.isVisible()) await consent.click();
     await expect(
       page.getByText(/I'm Prempawee's portfolio AI|ผม(?:เป็น|คือ) AI ของ Prempawee/i),
     ).toBeVisible();
+    // "What do you need built?" lives on the chat input's placeholder
+    // attribute in the new Landing design (was rendered as visible text in
+    // the retired chat.tsx). getByPlaceholder is the selector that works
+    // against both markups.
     await expect(
-      page.getByText(/What do you need built\?|คุณต้องการให้สร้างอะไร/i),
+      page.getByPlaceholder(
+        /What do you need built\?|คุณต้องการให้สร้างอะไร/i,
+      ),
     ).toBeVisible();
   });
 
@@ -104,8 +115,12 @@ test.describe("prempawee.com · hydration smoke", () => {
     await input.fill("test");
     await input.press("Enter");
 
-    // Wait until the request has been issued (response starts streaming)
-    await expect(page.getByText("test")).toBeVisible();
+    // Wait until the request has been issued (response starts streaming).
+    // .first() because the assistant's streamed response often echoes the
+    // word "test" — strict-mode getByText would resolve to multiple elements.
+    // The first match is the user-message bubble that appears synchronously
+    // on send, which is what proves the input was accepted.
+    await expect(page.getByText("test").first()).toBeVisible();
     await page.waitForTimeout(1500);
 
     expect(capturedSid).not.toBeNull();
