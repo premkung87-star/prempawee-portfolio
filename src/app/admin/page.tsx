@@ -8,21 +8,29 @@ type Counts = {
   conversations: number | null;
   leads: number | null;
   analytics: number | null;
+  feedback: number | null;
 };
 
 async function getCounts(): Promise<Counts> {
   if (!supabaseAdmin) {
-    return { conversations: null, leads: null, analytics: null };
+    return {
+      conversations: null,
+      leads: null,
+      analytics: null,
+      feedback: null,
+    };
   }
-  const [conv, leads, analytics] = await Promise.all([
+  const [conv, leads, analytics, feedback] = await Promise.all([
     supabaseAdmin.from("conversations").select("id", { count: "exact", head: true }),
     supabaseAdmin.from("leads").select("id", { count: "exact", head: true }),
     supabaseAdmin.from("analytics").select("id", { count: "exact", head: true }),
+    supabaseAdmin.from("feedback").select("id", { count: "exact", head: true }),
   ]);
   return {
     conversations: conv.count ?? null,
     leads: leads.count ?? null,
     analytics: analytics.count ?? null,
+    feedback: feedback.count ?? null,
   };
 }
 
@@ -46,14 +54,16 @@ export default async function AdminIndex() {
 
       <h1 className="text-[24px] text-white font-medium mb-8">Overview</h1>
 
-      <div className="grid grid-cols-3 gap-4 mb-10">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-10">
         <StatCard label="Conversations" value={counts.conversations} />
         <StatCard label="Leads" value={counts.leads} />
+        <StatCard label="Feedback" value={counts.feedback} />
         <StatCard label="Events" value={counts.analytics} />
       </div>
 
       <nav className="space-y-2">
         <AdminLink href="/admin/leads" title="Leads" desc="Captured lead submissions, newest first" />
+        <AdminLink href="/admin/feedback" title="Feedback" desc="Visitor feedback from the footer form (bug / suggestion / thanks / other)" />
         <AdminLink href="/admin/conversations" title="Conversations" desc="Recent chat sessions — user + assistant messages" />
         <AdminLink href="/admin/finops" title="FinOps" desc="Token usage + $ cost + cache hit rate (last 30 days)" />
       </nav>
