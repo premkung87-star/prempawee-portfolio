@@ -205,6 +205,46 @@ export async function insertLead(
   return { ok: true, id: data.id };
 }
 
+/**
+ * Insert a feedback row (service-role required). Mirrors the DB-level CHECK
+ * constraints from migration 003_feedback.sql. Returns the new row id.
+ */
+export type FeedbackInput = {
+  type: "bug" | "suggestion" | "thanks" | "other";
+  body: string;
+  email?: string | null;
+  page_url?: string | null;
+  user_agent?: string | null;
+  ip_prefix?: string | null;
+};
+
+export async function insertFeedback(
+  input: FeedbackInput,
+): Promise<{ ok: boolean; id?: number; error?: string }> {
+  if (!supabaseAdmin) {
+    return { ok: false, error: "service_role_not_configured" };
+  }
+  const { data, error } = await supabaseAdmin
+    .from("feedback")
+    .insert({
+      type: input.type,
+      body: input.body.slice(0, 4000),
+      email: input.email?.slice(0, 254) ?? null,
+      page_url: input.page_url?.slice(0, 2048) ?? null,
+      user_agent: input.user_agent?.slice(0, 500) ?? null,
+      ip_prefix: input.ip_prefix?.slice(0, 64) ?? null,
+    })
+    .select("id")
+    .single();
+  if (error) {
+    logError("supabase.feedback.insert.failed", {
+      error: { message: error.message, code: error.code },
+    });
+    return { ok: false, error: error.message };
+  }
+  return { ok: true, id: data.id };
+}
+
 // ---------------------------------------------------------------------------
 // RAG knowledge-base cache — two-tier: L1 in-memory per-isolate (30s fast
 // path), L2 Upstash Redis (global, 5min, cross-isolate). /api/revalidate
