@@ -343,14 +343,25 @@ export async function POST(req: Request) {
       // never logged. streamText awaits this callback before finalizing the
       // stream, so awaiting here keeps the worker alive long enough for the
       // Supabase insert to land.
+      // AI SDK v6 moved cache token counts from
+      // providerMetadata.anthropic.cache{Creation,Read}InputTokens onto the
+      // standardized usage.inputTokenDetails.{cacheWriteTokens,cacheReadTokens}
+      // shape (LanguageModelUsage type, ai/dist/index.d.ts). The old field
+      // names still exist on AnthropicMessageMetadata for cacheCreation only —
+      // cacheReadInputTokens does NOT exist in v6, which is why our analytics
+      // showed cache_read=0 even when caching worked. Read v6 fields first,
+      // fall back to legacy for cache_create only (cacheRead has no legacy).
       const anthropicMeta = (providerMetadata?.anthropic ?? {}) as {
         cacheCreationInputTokens?: number;
-        cacheReadInputTokens?: number;
       };
       const inputTokens = usage?.inputTokens ?? 0;
       const outputTokens = usage?.outputTokens ?? 0;
-      const cacheCreation = anthropicMeta.cacheCreationInputTokens ?? 0;
-      const cacheRead = anthropicMeta.cacheReadInputTokens ?? 0;
+      const tokenDetails = usage?.inputTokenDetails;
+      const cacheCreation =
+        tokenDetails?.cacheWriteTokens ??
+        anthropicMeta.cacheCreationInputTokens ??
+        0;
+      const cacheRead = tokenDetails?.cacheReadTokens ?? 0;
 
       // Await both critical writes in parallel so both survive the worker
       // teardown. Individual failures don't reject the Promise.all — each
