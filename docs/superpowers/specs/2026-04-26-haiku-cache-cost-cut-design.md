@@ -174,3 +174,15 @@ Only ship if Foreman is unsatisfied with PR 1's cost (target: <$50/mo).
 1. **Eval prompts live in repo** at `tests/eval/haiku-vs-sonnet.frozen.json`. Re-runnable for any future model evaluation.
 2. **Side-by-side review format:** static HTML report (one scroll-through). Render via a script that emits `tests/eval/haiku-vs-sonnet.report.html` (gitignored — generated artifact, not committed).
 3. **PR 1 ships today.** Pure cache fix, no model risk. PR 2 plan written separately after cache-read numbers land in FinOps.
+
+## PR 1 verified — 2026-04-26
+
+PR #53 (cache + runtime) shipped + PR #54 (analytics field fix) shipped. Verification ran 3 fresh chat requests against prempawee.com and queried `analytics.token_usage`. Result:
+
+- **Cache hit ratio: 86-100%** on consecutive requests within a 1h cache window.
+- Per-request cost: ~$0.0065 (down from ~$0.030 = **~78% reduction**).
+- Projected monthly: $306/mo trajectory → ~$60-90/mo (matches architect's prediction).
+
+**Discovered during verification:** AI SDK v6 moved cache token counts from `providerMetadata.anthropic.cacheReadInputTokens` (which doesn't exist in v6) to `usage.inputTokenDetails.{cacheReadTokens, cacheWriteTokens}`. PR #54 fixed the field reads — the underlying caching was working all along, the analytics was lying. Lesson logged for future SDK migrations: verify telemetry field names, not just types.
+
+**Status:** PR 1 scope COMPLETE. PR 2 (Haiku 4.5 swap) deferred — Foreman will decide based on a 24h cost trend whether the additional ~3-4× reduction is worth the eval work.
