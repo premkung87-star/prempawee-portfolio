@@ -165,6 +165,77 @@ const ENTRIES = [
       "Quoted timelines (Starter 5 days, Pro 14 days, Enterprise 30 days) start from the approved-specification date, not the date of inquiry. The approved-specification milestone happens after the free 15-minute consultation, the requirement form is completed, and Prempawee delivers a flow diagram and Rich Menu wireframes for client approval. Common delay drivers, all flagged at kickoff: LINE OA admin access not granted from the LINE Developers Console adds typically 2 to 3 days, content and copy not provided by client adds 3 to 5 days, mid-project scope changes vary in impact and are quoted as a separate change order. Prempawee will surface delay risk in writing within 24 hours of the cause appearing, so neither side discovers a missed date in the final week.",
     metadata: { last_updated: "2026-04-25" },
   },
+  // -------------------------------------------------------------------------
+  // HR-reviewed bio refresh (2026-04-26, Session 7).
+  // Spec authored by Foreman after Senior HR consultation. Removes
+  // credibility risks (no GPA disclosure, no age disclosure, no negative
+  // competitor framing). Repositions toward generalism + foundations-first
+  // philosophy. The two existing-row edits use the existing titles so
+  // upsertEntry() updates by title rather than inserting duplicates.
+  // -------------------------------------------------------------------------
+  {
+    // E1 — edit existing row #1 (matched by title)
+    title: "About Prempawee",
+    category: "bio",
+    content:
+      "Prempawee is a One Person Business generalist who ships production AI systems end-to-end from Chiang Mai, Thailand. He graduated in 2026 from the Faculty of Mass Communication at Chiang Mai University, then transitioned into AI-native development with Claude Code as his primary craft. His working principle is simple: reduce weaknesses before adding strengths. Foundations before features, observability before scale. Started as a marketing intern for NWL, a streetwear brand from Bangkok, then grew into managing all digital operations for NWL CLUB. Founded VerdeX Farm, an AI-powered smart greenhouse project. Now builds intelligent LINE OA Chatbot systems, admin dashboards, AI agents, and bilingual systems for Thai businesses. Monthly income goal: 100,000 THB.",
+    metadata: {
+      education: "Mass Communication, Chiang Mai University, graduated 2026",
+      location: "Chiang Mai, Thailand",
+      english_level: "B1",
+      languages: ["Thai", "English"],
+      positioning: "One Person Business generalist",
+      last_updated: "2026-04-26",
+    },
+  },
+  {
+    // E2 — edit existing row #16 (matched by title)
+    title: "What makes Prempawee different from other chatbot developers?",
+    category: "faq",
+    content:
+      "Four things set Prempawee apart from typical AI freelancers. First, foundations-first delivery — production-grade infrastructure, observability, and security ship before features. Maintenance is built-in, not retrofitted. Second, generalist breadth — as a One Person Business, he ships end-to-end across web apps, admin dashboards, IoT integrations, AI agents, and chatbots. No vendor coordination overhead, no integration gaps. Third, bilingual EN/TH delivery — Thai prompts that sound natural to Thai users, English documentation for international stakeholders, clean code-switching in production systems. Fourth, communication training — a Mass Communication background means project documentation, prompt design, and client conversations are treated as part of the engineering deliverable. LINE OA chatbots are one example among several surfaces he ships — the published packages are named around them because that's the most common request from Thai SMEs.",
+    metadata: { last_updated: "2026-04-26" },
+  },
+  {
+    // A1
+    title: "Work Philosophy",
+    category: "bio",
+    content:
+      "Prempawee's work philosophy is direct: reduce weaknesses before adding strengths. Foundations first, features second. Production-grade infrastructure ships before scale, observability before growth, maintenance built-in — never retrofitted. Rooted in Stoic discipline: no shortcuts, no silent failures. Adapted from how Prempawee runs his own portfolio site (production-grade security headers, RAG with grounding rules, full E2E test gates, audit log of every silent failure).",
+    metadata: { last_updated: "2026-04-26" },
+  },
+  {
+    // A2
+    title: "Generalism over specialism",
+    category: "bio",
+    content:
+      "Prempawee operates as a One Person Business generalist, not a single-surface specialist. He works end-to-end across LINE OA chatbots, admin dashboards, AI agents, IoT integrations, RAG systems, full-stack web apps, and bilingual Thai/English systems. The reasoning: a One Person Business with strong foundations can ship across surfaces faster than a multi-vendor team can coordinate — no hand-offs, no integration friction, no scope gaps between vendors.",
+    metadata: { last_updated: "2026-04-26" },
+  },
+  {
+    // A3
+    title: "Mass Communication × AI — why the combo matters",
+    category: "bio",
+    content:
+      "Prempawee graduated in 2026 from the Faculty of Mass Communication at Chiang Mai University — an unusual background for an AI developer. The combination shows up directly in delivery: Thai prompts in his chatbots sound like natural Thai speech, system prompts handle Thai-English code-switching cleanly, and project documentation is written so that non-technical owners can actually read it. Communication is treated as part of the engineering deliverable, not an afterthought.",
+    metadata: { last_updated: "2026-04-26" },
+  },
+  {
+    // A4
+    title: "Personal values",
+    category: "bio",
+    content:
+      "Prempawee values reading, writing, and Stoic discipline alongside building. In delivery, this translates to full ownership of the entire stack — design, infrastructure, code, observability, and post-launch maintenance all sit with one person. No hand-offs, no \"that's not my responsibility\" moments, no missing accountability between vendors.",
+    metadata: { last_updated: "2026-04-26" },
+  },
+  {
+    // A5
+    title: "Are you only good at LINE OA chatbots?",
+    category: "faq",
+    content:
+      "No. LINE OA chatbots are one of several surfaces Prempawee ships across. He delivers end-to-end on web apps (Next.js, Cloudflare Workers), admin dashboards (Supabase, real-time data), IoT integrations (sensors, MQTT), AI agents (Claude tool-use, RAG), and bilingual Thai/English systems. The published packages are named around chatbots because that's the most common request from Thai SMEs — but custom scopes are quoted on a per-project basis.",
+    metadata: { last_updated: "2026-04-26" },
+  },
 ];
 
 /**
