@@ -303,16 +303,22 @@ export async function POST(req: Request) {
 
   const result = streamText({
     model: anthropic("claude-sonnet-4-20250514"),
-    system: systemPrompt,
-    messages,
-    providerOptions: {
-      // 1h TTL prompt caching. Extends the default 5-min ephemeral tier.
-      // Because the system prompt (base rules + full KB) is stable across
-      // queries — per-query semantic retrieval lives in the user message —
-      // this cache should hit on ~every request after warm-up. Measured
-      // via cache_read_input_tokens in the onFinish callback below.
-      anthropic: { cacheControl: { type: "ephemeral", ttl: "1h" } },
+    // 1h TTL prompt caching attached to the SYSTEM MESSAGE specifically.
+    // Top-level providerOptions on streamText is NOT propagated to the
+    // system content block in AI SDK v6.0.168 — verified against
+    // node_modules/@ai-sdk/anthropic/dist/index.mjs line 2086-2092 (system
+    // case reads providerOptions from the message itself). Putting it
+    // here applies cache_control to the stable system prefix (base rules +
+    // full KB), which is what we want cached. Per-query semantic retrieval
+    // lives in the user message and stays out of the cached prefix.
+    system: {
+      role: "system",
+      content: systemPrompt,
+      providerOptions: {
+        anthropic: { cacheControl: { type: "ephemeral", ttl: "1h" } },
+      },
     },
+    messages,
     stopWhen: stepCountIs(3),
     onError: ({ error }) => {
       logError("chat.stream.error", {
