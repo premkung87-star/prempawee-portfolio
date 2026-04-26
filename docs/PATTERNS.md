@@ -246,13 +246,147 @@ Two instances install **two** of each. Result:
 
 ---
 
+## 7. CSS containment for sticky-safe clipping — `overflow: clip` not `overflow: hidden`
+
+**Surfaced in:** Session 7, AUDIT_LOG §38 (Bug A)
+**Symptom history:** Foreman opened Session 7 reporting "the area below [the chat] is completely empty. It's just a black space, and the interactive section (02 process) has disappeared." Process section was rendering as a giant black void after the first viewport-height of scrolling.
+
+When a parent element has `overflow: hidden` and contains a `position: sticky` child, sticky pinning silently breaks. Per CSS Overflow Module Level 3, any `overflow` value other than `visible` or `clip` makes the element a *scroll container* for sticky positioning. The sticky child resolves its `top: 0` against THAT parent's scroll position — and since the parent itself is not scrolled (the document is), the sticky child stays at its initial position within the parent and slides off-screen with the parent as the user scrolls the document.
+
+**Wrong:**
+
+```tsx
+<section className="overflow-hidden relative" style={{ height: "360vh" }}>
+  <BinaryStarField stars={...} />            {/* absolute decoration to clip */}
+  <div className="sticky top-0 h-dvh">       {/* ← never pins; slides with section */}
+    {stickyContent}
+  </div>
+</section>
+```
+
+**Right:**
+
+```tsx
+<section className="overflow-clip relative" style={{ height: "360vh" }}>
+  <BinaryStarField stars={...} />
+  <div className="sticky top-0 h-dvh">       {/* ← pins to viewport correctly */}
+    {stickyContent}
+  </div>
+</section>
+```
+
+**The Chromium gotcha that catches the half-fix:** reaching for `overflow-x: hidden` (to keep horizontal clipping while leaving vertical free) does NOT work — Chromium silently promotes `overflow-y: visible` to `overflow-y: auto` whenever `overflow-x: hidden` is set, per the CSS Overflow spec's "computed value" table (visible/clip cannot mix with hidden/scroll/auto across axes). The promoted `auto` produces the same scroll-container side-effect on the y-axis, reproducing the bug identically. Use `overflow-x: clip` instead (Tailwind: `overflow-x-clip`) — it has the matching one-axis-only behavior without the scroll-container side effect.
+
+**Browser support:**
+- `overflow: clip` — Chrome 90+ (April 2021), Firefox 81+ (September 2020), Safari 16+ (September 2022)
+- Covers prempawee's target audience fully; if older Safari support is ever required, fall back to `contain: paint` on the parent OR a wrapper structure that moves clipping outside the sticky's containing block.
+
+**When to use:** any /preview section that wraps decorative absolute-positioned children needing clipping (BinaryStarField, marquees, particle effects) AND contains sticky descendants. The `overflow-clip` swap is free if those decorations are the only reason `overflow-hidden` was there.
+
+**When NOT to use:** if the parent genuinely needs to be a scroll container (rare in /preview-scale apps — would mean a scrollable inner panel like a chat history, not a section background).
+
+**Quick audit grep:**
+
+```bash
+# Find any /preview section combining overflow-hidden with sticky children:
+rg -A 30 'overflow-hidden' src/components/preview/*.tsx | rg -B 30 'sticky'
+```
+
+---
+
+## 8. Defer non-deterministic render-path values to post-mount via `mounted` flag
+
+**File:** `src/components/preview/BinaryStarField.tsx`
+**Surfaced in:** Session 7, AUDIT_LOG §38 (Bug B)
+**Symptom history:** every `/preview` page load logged a React hydration mismatch error in the dev console, traced to BinaryStarField's `useMemo` calling `pickChar()` (which uses `Math.random()`) during render. SSR produced one set of cycling characters, client produced another, hydration failed silently, React fell back to regenerating the whole tree client-side. The page rendered correctly because React recovers, but every load incurred wasted reconciliation + a console error trace — the same silent-drift failure-mode class as AUDIT_LOG §17/§20.
+
+The hydration contract is that SSR HTML and the first client render must produce byte-identical trees. Any function inside the render path that returns different values across the SSR/client boundary breaks that contract:
+
+- `Math.random()` — different seed per call, server vs client
+- `Date.now()` / `new Date()` (no-arg) — clock drift between SSR and client
+- Locale-dependent formatters (`toLocaleString()` without explicit locale) — server locale ≠ client locale
+- `crypto.randomUUID()` — same as Math.random
+- `window.matchMedia()` (read during render) — undefined on server
+- `navigator.*` reads — undefined on server
+
+**Wrong:**
+
+```tsx
+function BinaryStar({ shape }: Props) {
+  const cells = useMemo(() => {
+    const arr = [];
+    for (let r = 0; r < MH; r++) {
+      for (let c = 0; c < MW; c++) {
+        if (mask[r][c]) {
+          arr.push({ r, c, ch: pickChar() });   // ← Math.random() in render
+        }
+      }
+    }
+    return arr;
+  }, [tick, shape]);
+  // ...
+}
+```
+
+**Right (mounted-flag pattern):**
+
+```tsx
+function BinaryStar({ shape }: Props) {
+  const [mounted, setMounted] = useState(false);
+
+  // Defer randomization to post-mount so SSR and first client render match.
+  useEffect(() => { setMounted(true); }, []);
+
+  const cells = useMemo(() => {
+    const arr = [];
+    for (let r = 0; r < MH; r++) {
+      for (let c = 0; c < MW; c++) {
+        if (mask[r][c]) {
+          // SSR + first client render: deterministic checkerboard.
+          // Post-mount: randomized chars cycle via tick.
+          const ch = mounted ? pickChar() : (r + c) % 2 === 0 ? "0" : "1";
+          arr.push({ r, c, ch });
+        }
+      }
+    }
+    return arr;
+  }, [tick, shape, mounted]);
+  // ...
+}
+```
+
+**Why this over alternatives:**
+
+- **`suppressHydrationWarning` (escape hatch):** silences the console error but the mismatch still happens — React still pays the regeneration cost on every load, and silent drift is exactly the failure mode CLAUDE.md/AUDIT_LOG §17/§20 warn against. Use only when the divergence is intentional and trivial (e.g. a localized timestamp).
+- **Render the random content only client-side via dynamic import with `{ ssr: false }`:** works but heavier (extra chunk, FOIT-style flicker). Mounted-flag is cheaper for small components.
+- **Move the random call into `useEffect` and store in state:** equivalent to mounted-flag but adds an extra render cycle. Mounted-flag with deterministic SSR fallback is simpler.
+- **`useId()`:** the right call for ID generation (Wide-tree-safe across SSR), but doesn't help for cycling display content.
+
+**Concrete pre-deploy grep:**
+
+```bash
+# For any new /preview component, verify no non-deterministic render-path values:
+rg -nE 'Math\.random|Date\.now|new Date\(\)|crypto\.randomUUID' src/components/preview/*.tsx | rg -v 'useEffect|onClick|setTimeout|setInterval'
+```
+
+Anything that lights up needs to be either inside a `useEffect`/event handler, or gated behind a `mounted` flag with a deterministic SSR fallback.
+
+**When to use:** any decorative or animated component that uses non-deterministic input for its initial render (cycling chars, particle positions, jitter, gradient seeds).
+
+**When NOT to use:** purely event-driven randomness (e.g. randomizing on click) — those execute post-mount by construction and don't affect SSR.
+
+---
+
 ## Cross-references
 
 - **AUDIT_LOG §08** — fire-and-forget edge promises (the broader anti-pattern that motivates Pattern 6's listener cleanup)
+- **AUDIT_LOG §17** + **§20** — silent React 19 hydration failures with no console signal (the failure-mode class Pattern 8 prevents at the component level)
 - **AUDIT_LOG §32** — GROUNDING RULE origin
 - **AUDIT_LOG §33** — GROUNDING RULE generalized to KB writes + marketing copy
 - **AUDIT_LOG §34** — GROUNDING RULE rescue from Claude Design fabricated content (motivates Pattern 3 + 4)
 - **AUDIT_LOG §35** — head-orchestration in practice (motivates Pattern 5)
+- **AUDIT_LOG §38** — overflow-clip + post-mount-flag rules from Session 7 (motivates Pattern 7 + 8)
 - **CLAUDE.md** — entry point + risk classification matrix
+- **KARPATHY.md §6** — browser verification is the only valid success signal for render-path changes (informs Pattern 7 + 8 — both bugs were silent to typecheck/lint/build, only real browser scroll/console revealed them)
 - **KARPATHY.md §13** — don't overengineer (informs all patterns above)
 - **KARPATHY.md §16** — verify before claim (informs Pattern 3)
