@@ -175,14 +175,55 @@ Only ship if Foreman is unsatisfied with PR 1's cost (target: <$50/mo).
 2. **Side-by-side review format:** static HTML report (one scroll-through). Render via a script that emits `tests/eval/haiku-vs-sonnet.report.html` (gitignored — generated artifact, not committed).
 3. **PR 1 ships today.** Pure cache fix, no model risk. PR 2 plan written separately after cache-read numbers land in FinOps.
 
-## PR 1 verified — 2026-04-26
+## Phase 1 findings — 2026-04-26 (honest re-verification)
 
-PR #53 (cache + runtime) shipped + PR #54 (analytics field fix) shipped. Verification ran 3 fresh chat requests against prempawee.com and queried `analytics.token_usage`. Result:
+The original "Verified result" claim in this spec — written ~10 minutes after PR #54 deployed — was wrong. It measured 6 synthetic same-session curl requests, not real production economics. Foreman caught the error by checking `/admin/finops` and finding the projected/mo had RISEN from $306 to $340.54 with cache hit rate at 3.8%. Re-verification ran via `scripts/diagnostic-cache.mjs` against real production data.
 
-- **Cache hit ratio: 86-100%** on consecutive requests within a 1h cache window.
-- Per-request cost: ~$0.0065 (down from ~$0.030 = **~78% reduction**).
-- Projected monthly: $306/mo trajectory → ~$60-90/mo (matches architect's prediction).
+### Real numbers (from `analytics.token_usage`, last 24h)
 
-**Discovered during verification:** AI SDK v6 moved cache token counts from `providerMetadata.anthropic.cacheReadInputTokens` (which doesn't exist in v6) to `usage.inputTokenDetails.{cacheReadTokens, cacheWriteTokens}`. PR #54 fixed the field reads — the underlying caching was working all along, the analytics was lying. Lesson logged for future SDK migrations: verify telemetry field names, not just types.
+**Hourly per-call cost (Q1):**
+- 4h pre-PR#53 (03:13Z–07:13Z): $0.0385/call across 69 calls
+- 4h post-PR#53 (07:13Z–11:13Z): $0.0194/call across 64 calls
+- **Per-call delta: −49.6%**
 
-**Status:** PR 1 scope COMPLETE. PR 2 (Haiku 4.5 swap) deferred — Foreman will decide based on a 24h cost trend whether the additional ~3-4× reduction is worth the eval work.
+**Session length (Q2):** 678/679 sessions in last 7 days had exactly 1 user message. Median=1, P90=1, max=5. Within-session caching is essentially impossible at this traffic shape.
+
+**Cross-session cache amortization (Q4):** Despite single-message sessions, the cache amortizes across multiple sessions hitting the same warm Anthropic isolate within the 1h TTL. Post-PR#54 sample showed cache_read=337,626 vs cache_write=2,728 — a 124× read-to-write ratio. **Caching is net positive.**
+
+### Why the dashboard misleads
+
+The `/admin/finops` aggregate is computed over 30 days. PR #54 (the analytics field fix) only deployed 30 minutes before the bad-verification claim. So 29 of 30 days in the dashboard's window have `cache_read=0` not because caching wasn't working but because we were reading a non-existent field name. The dashboard is telling the truth about the LAST 30 DAYS — which were mostly pre-fix.
+
+**The dashboard cost formula itself is correct** (verified by reading `src/app/admin/finops/page.tsx:37-52`). The misleading numbers come from the aggregate window weighting heavily toward pre-fix data:
+- 30d cache hit rate (3.8%) uses 30d denominator dominated by pre-fix traffic
+- Projected/mo extrapolates from a 7-day rolling average that's mostly pre-fix
+- Today's per-call cost ($0.0348) mixes pre-PR#53 calls + post-PR#53 calls
+
+The dashboard will self-correct over 30 days as the rolling window slides.
+
+### Caveats — what we still don't know
+
+- The post-merge sample is small (4 hours, ~64 calls)
+- Most of those 64 calls are synthetic: verification curls + post-merge CI browser-smoke runs (~9 chat calls per merge × 3 merges)
+- Real user traffic is sparse (~5-15 calls/hour)
+- Whether caching keeps amortizing for real users depends on traffic density vs the 1h cache TTL — a region with one user/hour gains nothing
+
+The 49.6% per-call reduction is a real signal but its magnitude on real-user-only traffic is unknown until we have ~24h of post-fix data.
+
+### Status
+
+- PR 1 scope (cache + runtime + analytics): **shipped, working, dashboard aggregate will lag for ~30 days**
+- 24h trend check: pending (Foreman to monitor `/admin/finops` daily row tomorrow)
+- PR 2 (Haiku 4.5 swap): still deferred per the spec's locked decision; if 24h trend doesn't show clear cost drop, PR 2 becomes primary lever
+
+## Lessons learned
+
+**1. Synthetic verification is not production economic verification.** Running 3 rapid curl requests in the same session and observing a 99% cache hit is a measurement of the cache mechanism, not the cost economics. Real production traffic has different shape (single-message sessions arriving at varying rates), and only same-day pre/post hourly comparisons against the FinOps dashboard prove cost actually moved.
+
+**Architect mistake pattern (logged for future sessions):** "Synthetic test verification is not production economic verification — always check the FinOps dashboard with same-day pre/post hourly comparison before claiming a cost optimization worked."
+
+**2. SDK telemetry field names need verification, not just types.** AI SDK v6 deleted `providerMetadata.anthropic.cacheReadInputTokens`. TypeScript didn't catch it (we typed it as optional). The analytics silently logged 0 for a month. Lesson: on any major SDK migration, write a smoke test that asserts the telemetry field is populated with non-zero values for a known-cacheable request.
+
+**3. Dashboard aggregate windows lag fixes.** A 30-day rolling window will mask an improvement deployed today for ~29 days. Either shorten the window for fix-verification purposes (24h or 1h panels), or tag rows with a `code_version` label so the dashboard can stratify pre/post.
+
+**4. Beware self-spam in production analytics.** My own verification curls + CI post-merge browser-smoke runs are part of `analytics.token_usage`. Diagnostic queries should filter or label synthetic traffic so they don't bias real-user economic analysis.
