@@ -160,3 +160,31 @@ Plan on ~minutes of downtime during restore.
 - **No queue / background jobs** — if future features need async processing (send an email, summarize a long conversation, etc.), add Upstash QStash.
 - **Repo is public** — Hobby-plan constraint. Private repo needs Vercel Pro OR commit-author email matching the Vercel team owner.
 - **Custom domain not attached** — still on `*.vercel.app`.
+
+## Deferred work — TODO
+
+Logged 2026-04-26 from session feedback on pawee-workflow-kit (Gaps 3 + 4). Not blocking. Pick up when a related session creates the right opportunity.
+
+### TODO: Self-spam analytics filtering (kit Gap 3)
+
+Production analytics tables (`analytics.token_usage`, conversion events, latency rows) include synthetic traffic from CI smoke tests, deploy-verification curls, and developer testing. Today's session showed this contaminating ~30 of 64 post-merge calls in the cache-fix economic analysis.
+
+Options to consider when picking this up:
+
+1. **Tag at logging time.** Add `synthetic: true` flag to `event_data` when the request originates from a known-synthetic context. Detection: `User-Agent: playwright/*` (CI smoke), `x-session-id` prefix `cache-verify-*` (verification curls), `x-session-id` prefix `srv-test-*` or matching CI runner pattern. Diagnostic queries filter `WHERE event_data->>'synthetic' IS NULL`.
+2. **Filter by session_id pattern at query time.** Less robust (depends on developer discipline naming sessions). Useful as fallback.
+3. **Separate analytics table for synthetic events.** Cleanest separation; highest migration cost.
+
+Owner: TBD. Trigger: next time we run economic analysis on production telemetry.
+
+Related: `.pawee/extensions/20-verify-production-claims.md` (the rule that surfaces this gap), `KARPATHY.md` Part 2 (candidate to add as Rule 21 when implemented).
+
+### TODO: Trivial-scope inline mode for subagent-driven skill (kit Gap 4)
+
+Today's PR #53 used the `superpowers:subagent-driven-development` 3-agent pipeline (implementer + spec reviewer + code-quality reviewer) per task. For 2 tasks of ~15 lines each with verbatim code in the plan, that's 6 dispatches finding zero issues. The reviews didn't catch nothing because there was nothing to catch — the work was mechanical and the plan was complete.
+
+Possible kit-side improvement: a "trivial-scope inline mode" affordance — when a task is mechanical (verbatim code in plan, single file, < 20 lines change, no logic decisions), the controller executes inline and skips the 3-agent pipeline. The two-stage review still applies for any task with logic decisions, multi-file coordination, new abstractions, or > 20 lines.
+
+This is a kit / skill calibration question, not a project-level fix. When picking up, file as a feedback issue against `superpowers:subagent-driven-development` with today's PR #53 as the example case.
+
+Owner: TBD. Trigger: next time the 3-agent pipeline overhead feels disproportionate to scope.

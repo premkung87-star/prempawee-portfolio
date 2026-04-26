@@ -77,6 +77,16 @@ Before dispatching, Architect asks Foreman to run `ls <path>`, `grep -n PATTERN 
 
 - **generic:** same principle applies to any codebase — the claims and verification commands are specific to the stack, but the discipline is universal.
 
+## Note on CHECKPOINT pattern vs inline verification
+
+The investigate-first / CHECKPOINT-halt structure is specifically for **multi-agent dispatch** — when Architect (no repo access) is asking Builder (with repo access) to act on Architect's claim. The CHECKPOINT inverts the order: Builder investigates first, reports, then Architect designs the action against confirmed state.
+
+**When Architect = Builder = single agent with repo access** (e.g., a Claude Code session where one agent both plans and executes), the CHECKPOINT structure is unnecessary. The agent verifies inline before authoring the prompt / spec / code. The principle (verify before claim) is identical; the mechanism is collapsed because there is no inter-agent boundary to coordinate across.
+
+In single-agent mode, the failure looks like: agent proceeds from memory ("I think `cacheControl` goes on the system message") and writes code asserting that, instead of grepping the SDK source first. The fix is the same as the multi-agent case in spirit: verify before assert. The fix in mechanics is: read the relevant source file before writing the line that depends on its shape, not after.
+
+A useful test: before writing any line of code, prompt, or commit message that depends on a fact, ask "could I be wrong about this?" If yes, verify now. If verification is impossible without the other agent's environment, structure as CHECKPOINT. Otherwise, verify inline.
+
 ## Enforcement
 
 **Architect-side (primary):** Before dispatching any prompt with specific technical claims, Architect runs a mental (or literal) checklist: does the claim come from conversation memory alone, or from inspection of the current repo state? If memory alone, either verify now or split the prompt at a CHECKPOINT.
