@@ -6,6 +6,14 @@ This file is intentionally short. It imports the layered guidance files and stat
 
 ---
 
+## Foreman directive (2026-05-17)
+
+> "Foreman want you to use it please use it for the best" — Prem Pawee, 2026-05-17
+
+See [`pawee-workflow-kit:docs/FOREMAN_DIRECTIVE_2026-05-17.md`](https://github.com/premkung87-star/pawee-workflow-kit/blob/main/docs/FOREMAN_DIRECTIVE_2026-05-17.md) for today's full upgrade catalog (sequential-thinking MCP, claude-mem v13.2.0, codebase-memory-mcp full-mode index of the kit, Superpowers flow, 6 promoted ECC specialists, Wave 1 status widget, draft Phase 5 plan PR #94) and the discipline boundaries that bind "use it" inside this repo. Apply to all work in Prempawee_Portfolio.
+
+---
+
 ## Layered Guidance (read in this order)
 
 @KARPATHY.md
