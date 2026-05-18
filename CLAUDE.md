@@ -6,6 +6,24 @@ This file is intentionally short. It imports the layered guidance files and stat
 
 ---
 
+## Kit upgrades
+
+## Kit upgrade 2026-05-18 (post-bake-off)
+
+The pawee-workflow-kit shipped post-bake-off artifacts (kit PRs #97 + #99 merged 2026-05-18; PR #94 + #96 + #98 still DRAFT awaiting 2026-05-31 closeout):
+
+- **Skills:** `library/skills/verify-blocking-conditions/`, `library/skills/detect-overlap-before-completion/` — patterns for proving spec's "must block X until Y" clauses are actually wired, not just declared
+- **Specialist (INACTIVE in kit):** `library/agents/specialists/ecc-silent-failure-hunter-specialist.md` — promoted per PR #94 Track B; activate per-project by recruiting
+- **Evidence:** kit's `bake-off/results/REPORT.md` — ECC won 0.715 vs kit 0.640 on a single ungated blocking precondition the kit's 72-agent loadout missed; informs Track B's "demonstrated quality improvement on a comparable task" bar
+
+To pull the new content into this project (won't auto-activate the specialist):
+`bash .pawee/bootstrap/bootstrap.sh pawee-recruit --sync --scope project`
+
+To explicitly recruit the silent-failure-hunter specialist as ACTIVE here:
+`bash .pawee/bootstrap/bootstrap.sh pawee-recruit --add ecc-silent-failure-hunter-specialist --scope project`
+
+---
+
 ## Layered Guidance (read in this order)
 
 @KARPATHY.md
